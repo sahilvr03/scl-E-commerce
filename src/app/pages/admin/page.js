@@ -18,6 +18,8 @@ export default function AdminPage() {
     name: '',
     icon: '',
   });
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleProductChange = (e) => {
     setProduct({ ...product, [e.target.name]: e.target.value });
@@ -27,14 +29,47 @@ export default function AdminPage() {
     setCategory({ ...category, [e.target.name]: e.target.value });
   };
 
-  const handleProductSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(product),
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+ const handleProductSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    let imageUrl = product.imageUrl;
+
+    // Upload image to Cloudinary if a file is selected
+    if (file) {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "ecommerce"); // your preset
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: "POST",
+        body: formData,
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || "Upload failed");
+      }
+
+      imageUrl = data.secure_url; // Update the outer imageUrl variable
+
+      setUploading(false);
+    }
+
+    const productData = { ...product, imageUrl };
+
+    const response = await fetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(productData),
+    });
+
       if (response.ok) {
         toast.success('Product added successfully!');
         setProduct({
@@ -48,12 +83,15 @@ export default function AdminPage() {
           imageUrl: '',
           category: '',
         });
+        setFile(null);
       } else {
-        throw new Error('Failed to add product');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add product');
       }
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('Failed to add product');
+      toast.error(error.message || 'Failed to add product');
+      setUploading(false);
     }
   };
 
@@ -69,11 +107,12 @@ export default function AdminPage() {
         toast.success('Category added successfully!');
         setCategory({ name: '', icon: '' });
       } else {
-        throw new Error('Failed to add category');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add category');
       }
     } catch (error) {
       console.error('Error adding category:', error);
-      toast.error('Failed to add category');
+      toast.error(error.message || 'Failed to add category');
     }
   };
 
@@ -160,15 +199,23 @@ export default function AdminPage() {
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Image URL</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Product Image</label>
             <input
-              type="text"
-              name="imageUrl"
-              value={product.imageUrl}
-              onChange={handleProductChange}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-              required
             />
+            {file && (
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                Selected: {file.name}
+              </p>
+            )}
+            {product.imageUrl && !file && (
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                Current Image URL: {product.imageUrl}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
@@ -184,8 +231,9 @@ export default function AdminPage() {
             <button
               type="submit"
               className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-300"
+              disabled={uploading}
             >
-              Add Product
+              {uploading ? 'Uploading...' : 'Add Product'}
             </button>
           </div>
         </form>

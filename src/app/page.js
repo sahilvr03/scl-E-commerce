@@ -8,6 +8,34 @@ import ProductCard from '../app/components/ProductCard';
 import CategoryCard from '../app/components/CategoryCard';
 import SectionHeader from '../app/components/SectionHeader';
 import CountdownTimer from '../app/components/CountdownTimer';
+import { motion, AnimatePresence } from "framer-motion";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import Particles from "react-tsparticles";
+import { loadFull } from "tsparticles";
+
+// Dummy promotional images – replace with your own
+const promotions = [
+  {
+    id: 1,
+    title: "Spectacular Summer Savings: Up To 70% Off!",
+    description:
+      "Unbeatable deals on your favorite brands. Don’t miss out, offers are for a limited time!",
+    image: "/ad1.webp",
+  },
+  {
+    id: 2,
+    title: "Anime Collection: New Drops Available Now!",
+    description:
+      "Fresh drop shoulder tees inspired by your favorite anime heroes. Shop now!",
+    image: "/ad2.webp",
+  },
+  {
+    id: 3,
+    title: "Flash Sale: 50% Off All Tees!",
+    description: "Only for 48 hours! Grab your style before it’s gone.",
+    image: "/ad3.webp",
+  },
+];
 
 export default function HomePage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -17,6 +45,16 @@ export default function HomePage() {
   const [flashSaleProducts, setFlashSaleProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [justForYouProducts, setJustForYouProducts] = useState([]);
+  const [current, setCurrent] = useState(0);
+
+  const nextSlide = () => setCurrent((prev) => (prev + 1) % promotions.length);
+  const prevSlide = () =>
+    setCurrent((prev) => (prev - 1 + promotions.length) % promotions.length);
+
+  useEffect(() => {
+    const interval = setInterval(nextSlide, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const userId = 'mock-user-id-123'; // Replace with actual user authentication
 
@@ -96,16 +134,18 @@ export default function HomePage() {
   return (
     <div className="bg-gray-100 min-h-screen font-sans text-gray-900 dark:text-gray-100 transition-colors duration-300">
       <Toaster />
-      <header className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50">
+     <header className="bg-gradient-to-r from-white via-gray-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 shadow-md dark:shadow-lg sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 transition-all duration-300">
+
+
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="hidden md:flex justify-between items-center text-sm text-gray-600 dark:text-gray-300 py-2 border-b border-gray-200 dark:border-gray-700">
+          <div className="hidden md:flex justify-between items-center text-sm text-gray-600 dark:text-gray-300 py-2 border-b border-gray-300/40 dark:border-gray-600/40">
             <div className="flex space-x-6">
               <a href="#" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">Become a Seller</a>
               <a href="#" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">Affiliate Program</a>
             </div>
             <div className="flex items-center space-x-6">
               <a href="#" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">Help Center</a>
-              <button onClick={toggleDarkMode} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+              <button onClick={toggleDarkMode} className="p-2 rounded-full hover:bg-gray-200/30 dark:hover:bg-gray-700/30 transition-colors">
                 {isDarkMode ? <Sun className="h-5 w-5 text-yellow-400" /> : <Moon className="h-5 w-5 text-indigo-600" />}
               </button>
             </div>
@@ -114,7 +154,7 @@ export default function HomePage() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="md:hidden p-2 rounded-md hover:bg-gray-100/30 dark:hover:bg-gray-700/30 transition-colors"
               >
                 <Menu className="h-6 w-6 text-gray-700 dark:text-gray-300" />
               </button>
@@ -127,7 +167,7 @@ export default function HomePage() {
                 <input
                   type="text"
                   placeholder="Search for products, categories, brands..."
-                  className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full py-2.5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 text-sm"
+                  className="w-full bg-white/30 dark:bg-gray-700/30 backdrop-blur-md border border-gray-200 dark:border-gray-600 rounded-full py-2.5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 dark:text-gray-300" />
               </div>
@@ -135,15 +175,15 @@ export default function HomePage() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="md:hidden p-2 rounded-md hover:bg-gray-100/30 dark:hover:bg-gray-700/30 transition-colors"
               >
                 <Search className="h-6 w-6 text-gray-700 dark:text-gray-300" />
               </button>
-              <Link href="/account" className="hidden sm:flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <Link href="/account" className="hidden sm:flex items-center p-2 rounded-md hover:bg-gray-100/30 dark:hover:bg-gray-700/30 transition-colors">
                 <User className="h-6 w-6 text-gray-700 dark:text-gray-300" />
                 <span className="ml-2 text-base font-medium hidden lg:inline text-gray-700 dark:text-gray-200">Account</span>
               </Link>
-              <Link href="/carts" className="relative p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <Link href="/carts" className="relative p-2 rounded-md hover:bg-gray-100/30 dark:hover:bg-gray-700/30 transition-colors">
                 <ShoppingCart className="h-6 w-6 text-gray-700 dark:text-gray-300" />
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
@@ -159,7 +199,7 @@ export default function HomePage() {
                 <input
                   type="text"
                   placeholder="Search for products, categories, brands..."
-                  className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full py-2.5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 text-sm"
+                  className="w-full bg-white/30 dark:bg-gray-700/30 backdrop-blur-md border border-gray-300 dark:border-gray-600 rounded-full py-2.5 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 dark:text-gray-300" />
               </div>
@@ -167,51 +207,50 @@ export default function HomePage() {
           )}
         </div>
       </header>
+
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white dark:bg-gray-800 shadow-lg fixed inset-0 z-40 pt-20 overflow-y-auto transform transition-transform duration-300 ease-in-out">
+        <div className="md:hidden bg-white/60 dark:bg-gray-900/70 backdrop-blur-lg shadow-lg fixed inset-0 z-40 pt-20 overflow-y-auto">
           <div className="container mx-auto px-4 py-6">
             <div className="space-y-8">
               <div>
-                <h3 className="text-base font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-4">
-                  Explore
-                </h3>
+                <h3 className="text-base font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-4">Explore</h3>
                 <nav className="space-y-3">
-                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center">
+                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700/40 hover:text-teal-600 dark:hover:text-teal-400 flex items-center">
                     <Home className="w-5 h-5 mr-3" /> Home
                   </a>
-                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center">
+                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700/40 hover:text-teal-600 dark:hover:text-teal-400 flex items-center">
                     <Grid className="w-5 h-5 mr-3" /> Categories
                   </a>
-                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center">
+                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700/40 hover:text-teal-600 dark:hover:text-teal-400 flex items-center">
                     <Tag className="w-5 h-5 mr-3" /> Deals
                   </a>
-                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center">
+                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700/40 hover:text-teal-600 dark:hover:text-teal-400 flex items-center">
                     <Sparkles className="w-5 h-5 mr-3" /> New Arrivals
                   </a>
                 </nav>
               </div>
+
               <div>
-                <h3 className="text-base font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-4">
-                  My Account
-                </h3>
+                <h3 className="text-base font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-4">My Account</h3>
                 <nav className="space-y-3">
-                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center">
+                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700/40 hover:text-teal-600 dark:hover:text-teal-400 flex items-center">
                     <LogIn className="w-5 h-5 mr-3" /> Sign In
                   </a>
-                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center">
+                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700/40 hover:text-teal-600 dark:hover:text-teal-400 flex items-center">
                     <UserPlus className="w-5 h-5 mr-3" /> Create Account
                   </a>
-                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center">
+                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700/40 hover:text-teal-600 dark:hover:text-teal-400 flex items-center">
                     <Package className="w-5 h-5 mr-3" /> My Orders
                   </a>
-                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center">
+                  <a href="#" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700/40 hover:text-teal-600 dark:hover:text-teal-400 flex items-center">
                     <Heart className="w-5 h-5 mr-3" /> Wishlist
                   </a>
                 </nav>
               </div>
+
               <button
                 onClick={toggleDarkMode}
-                className="w-full flex items-center py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+                className="w-full flex items-center py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-teal-50 dark:hover:bg-gray-700 hover:text-teal-600 dark:hover:text-teal-400"
               >
                 {isDarkMode ? (
                   <>
@@ -229,21 +268,67 @@ export default function HomePage() {
           </div>
         </div>
       )}
+    
+  
       <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="relative bg-gradient-to-br from-teal-600 to-emerald-500 text-white rounded-xl mb-12 overflow-hidden shadow-lg animate-fade-in">
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent z-0"></div>
-          <div className="relative z-10 p-8 md:p-12 lg:p-16 max-w-3xl">
-            <h1 className="text-3xl md:text-5xl font-extrabold mb-4 leading-tight drop-shadow-md">
-              Spectacular Summer Savings: Up To 70% Off!
+        <div className="relative w-full h-[420px] rounded-xl overflow-hidden shadow-xl mb-12">
+      <AnimatePresence>
+        <motion.div
+          key={promotions[current].id}
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -100 }}
+          transition={{ duration: 0.6 }}
+          className="absolute inset-0 bg-cover bg-center flex items-center justify-center text-white"
+          style={{
+            backgroundImage: `linear-gradient(to top right, rgba(0,0,0,0.4), rgba(0,0,0,0.2)), url(${promotions[current].image})`,
+          }}
+        >
+          <div className="z-10 max-w-2xl text-center px-6">
+            <h1 className="text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-md">
+              {promotions[current].title}
             </h1>
-            <p className="text-lg md:text-xl mb-8 opacity-95">
-              Unbeatable deals on your favorite brands. Dont miss out, offers are for a limited time!
+            <p className="text-lg md:text-xl mb-6 opacity-90">
+              {promotions[current].description}
             </p>
             <button className="bg-white text-teal-700 font-bold px-8 py-4 rounded-full hover:bg-gray-100 transition-all duration-300 shadow-xl transform hover:scale-105 active:scale-95">
               Shop All Deals
             </button>
           </div>
-        </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Arrows */}
+      <div className="absolute top-1/2 left-4 -translate-y-1/2 z-20">
+        <button
+          onClick={prevSlide}
+          className="bg-black/50 hover:bg-black/70 p-3 rounded-full"
+        >
+          <FiChevronLeft size={24} />
+        </button>
+      </div>
+      <div className="absolute top-1/2 right-4 -translate-y-1/2 z-20">
+        <button
+          onClick={nextSlide}
+          className="bg-black/50 hover:bg-black/70 p-3 rounded-full"
+        >
+          <FiChevronRight size={24} />
+        </button>
+      </div>
+
+      {/* Dots */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+        {promotions.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setCurrent(idx)}
+            className={`w-3 h-3 rounded-full ${
+              current === idx ? "bg-white" : "bg-white/40"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
         <section className="mb-12">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div className="flex items-center space-x-3">
@@ -267,8 +352,23 @@ export default function HomePage() {
             ))}
           </div>
         </section>
-        <section className="mb-12">
-          <SectionHeader title="Shop by Category" linkText="All categories" />
+        <section className="mb-12 Text-gray-600 dark:text-gray-300">
+           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div className="flex items-center space-x-3">
+              <h2 className="text-xl font-bold text-gray-600  flex items-center">
+                {/* <Zap className="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" /> */}
+                Categories
+              </h2>
+              
+            </div>
+            <Link
+              href="#"
+              className="flex items-center text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
+            >
+              View all
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Link>
+          </div>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
             {categories.slice(0, 8).map(category => (
               <CategoryCard key={category._id} {...category} />
@@ -276,32 +376,37 @@ export default function HomePage() {
           </div>
         </section>
         <section className="mb-12">
-          <SectionHeader title="Recommended For You" linkText="See more" />
-          booze
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {justForYouProducts.map(product => (
+           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div className="flex items-center space-x-3">
+              <h2 className="text-xl font-bold text-gray-600  flex items-center">
+                Recommended For You
+              </h2>
+
+              
+             
+            </div>
+            <Link
+              href="#"
+              className="flex items-center text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
+            >
+              View all
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Link>
+            
+          </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {flashSaleProducts.map(product => (
               <ProductCard key={product._id} product={product} />
             ))}
           </div>
-        </section>
-        <section className="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 text-center mb-12 shadow-inner">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Join Our Community
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
-            Sign up for our newsletter and get 10% off your first order, plus exclusive deals and updates.
-          </p>
-          <div className="flex max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-grow bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400"
-            />
-            <button className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-r-lg font-medium transition-colors duration-300">
-              Subscribe
-            </button>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 mt-4 lg:grid-cols-5 gap-4">
+            {flashSaleProducts.map(product => (
+              <ProductCard key={product._id} product={product} />
+            ))}
           </div>
+         
         </section>
+        
       </main>
       <footer className="bg-gray-800 dark:bg-gray-900 text-gray-300 dark:text-gray-400 border-t border-gray-700 dark:border-gray-800 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
