@@ -1,19 +1,16 @@
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export async function POST() {
   try {
-    const cookieStore = cookies();
-    // Invalidate the token by setting an expired cookie
-    cookieStore.set('token', '', {
-      httpOnly: true,
-      path: '/',
-      maxAge: 0, // Set maxAge to 0 to expire the cookie immediately
-      sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production',
-    });
+    const response = NextResponse.json({ message: 'Logged out successfully' }, { status: 200 });
+    
+    // Clear the token cookie by setting it with an expired date
+    response.headers.set(
+      'Set-Cookie',
+      `token=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`
+    );
 
-    return NextResponse.json({ message: 'Logged out successfully' }, { status: 200 });
+    return response;
   } catch (error) {
     console.error('Logout error:', error);
     return NextResponse.json({ error: 'Failed to logout' }, { status: 500 });

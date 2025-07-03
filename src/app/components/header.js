@@ -14,12 +14,11 @@ import {
   Grid,
   Tag,
   Sparkles,
-  LogIn,
-  UserPlus,
-  Package,
-  Heart,
   LogOut,
   ChevronDown,
+  Package,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
 
 export default function Header() {
@@ -38,49 +37,35 @@ export default function Header() {
     { _id: '2', name: 'Fashion' },
     { _id: '3', name: 'Home & Living' },
     { _id: '4', name: 'Beauty' },
-  ]; // Mock categories, replace with API fetch if needed
-
-  const getTokenFromCookies = () => {
-    const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-      const [name, value] = cookie.trim().split('=');
-      acc[name] = value;
-      return acc;
-    }, {});
-    return cookies.token || null;
-  };
+  ];
 
   useEffect(() => {
     async function fetchSession() {
       setError(null);
-      const token = getTokenFromCookies();
-      if (!token) {
-        setIsLoggedIn(false);
-        setUserDetails(null);
-        setCartCount(0);
-        return;
-      }
-
       try {
         const response = await fetch('/api/auth/session', {
           credentials: 'include',
-          headers: { Authorization: `Bearer ${token}` },
         });
+        console.log('Session API status:', response.status); // Debug: Log response status
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           throw new Error('Received non-JSON response from session API');
         }
         const data = await response.json();
-        if (response.ok && data.session) {
+        console.log('Session API response:', data); // Debug: Log response data
+        if (response.ok && data.session && data.session.user) {
+          console.log('Session valid, setting isLoggedIn to true');
           setIsLoggedIn(true);
           setUserDetails(data.session.user);
           const cartResponse = await fetch(`/api/cart?userId=${data.session.user.id}`, {
-            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'include', // Include cookie for cart API
           });
           const cartContentType = cartResponse.headers.get('content-type');
           if (!cartContentType || !cartContentType.includes('application/json')) {
             throw new Error('Received non-JSON response from cart API');
           }
           const cartData = await cartResponse.json();
+          console.log('Cart API response:', cartData); // Debug: Log cart response
           if (cartResponse.ok) {
             const count = cartData.items ? cartData.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
             setCartCount(count);
@@ -88,6 +73,7 @@ export default function Header() {
             throw new Error(cartData.error || 'Failed to fetch cart');
           }
         } else {
+          console.log('No valid session, setting isLoggedIn to false');
           setIsLoggedIn(false);
           setUserDetails(null);
           setCartCount(0);
@@ -118,13 +104,13 @@ export default function Header() {
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
+        credentials: 'include',
       });
       if (response.ok) {
         toast.success('Logged out successfully!');
         setIsLoggedIn(false);
         setUserDetails(null);
         setCartCount(0);
-        document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
         router.push('/pages/login');
       } else {
         const errorData = await response.json();
@@ -218,23 +204,37 @@ export default function Header() {
                 <span className="ml-2 text-base font-medium hidden lg:inline text-gray-700 dark:text-gray-200">Orders</span>
               </Link>
               {isLoggedIn ? (
-                <div className="relative">
-                  <button className="flex items-center p-2 rounded-md hover:bg-orange-100 dark:hover:bg-gray-700 transition-colors">
-                    <User className="h-6 w-6 text-orange-500 dark:text-orange-400" />
-                    <span className="ml-2 text-base font-medium hidden lg:inline text-gray-700 dark:text-gray-200">
-                      {userDetails ? `Hello, ${userDetails.name}` : 'Account'}
-                    </span>
-                  </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg rounded-md py-2 hidden group-hover:block">
-                    <Link href="/account" className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700">Account</Link>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700"
+                <>
+                  <div className="relative group">
+                    <Link
+                      href="/account"
+                      className="flex items-center p-2 rounded-md hover:bg-orange-100 dark:hover:bg-gray-700 transition-colors"
                     >
-                      Logout
-                    </button>
+                      <div className="w-8 h-8 rounded-full bg-orange-500 dark:bg-orange-400 flex items-center justify-center text-white font-medium">
+                        {userDetails?.name?.[0]?.toUpperCase() || <User className="h-5 w-5" />}
+                      </div>
+                      <span className="ml-2 text-base font-medium hidden lg:inline text-gray-700 dark:text-gray-200">
+                        {userDetails ? userDetails.name : 'Account'}
+                      </span>
+                    </Link>
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg rounded-md py-2 hidden group-hover:block z-50">
+                      <Link href="/account" className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700">Account</Link>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700"
+                      >
+                        Logout
+                      </button>
+                    </div>
                   </div>
-                </div>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center p-2 rounded-md hover:bg-orange-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <LogOut className="h-6 w-6 text-orange-500 dark:text-orange-400" />
+                    <span className="ml-2 text-base font-medium hidden lg:inline text-gray-700 dark:text-gray-200">Logout</span>
+                  </button>
+                </>
               ) : (
                 <>
                   <Link
@@ -278,9 +278,7 @@ export default function Header() {
         </div>
       </header>
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop
-
--blur-lg shadow-lg fixed inset-0 z-40 pt-20 overflow-y-auto">
+        <div className="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg shadow-lg fixed inset-0 z-40 pt-20 overflow-y-auto">
           <div className="container mx-auto px-4 py-6">
             <div className="space-y-8">
               <div>
@@ -306,7 +304,10 @@ export default function Header() {
                   {isLoggedIn ? (
                     <>
                       <Link href="/account" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-500 dark:hover:text-orange-400 flex items-center">
-                        <User className="w-5 h-5 mr-3" /> Account
+                        <div className="w-5 h-5 rounded-full bg-orange-500 dark:bg-orange-400 flex items-center justify-center text-white text-xs font-medium mr-3">
+                          {userDetails?.name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
+                        </div>
+                        Account
                       </Link>
                       <button
                         onClick={handleLogout}
@@ -321,7 +322,7 @@ export default function Header() {
                         <LogIn className="w-5 h-5 mr-3" /> Sign In
                       </Link>
                       <Link href="/pages/signup" className="block py-2 px-3 rounded-md text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-500 dark:hover:text-orange-400 flex items-center">
-                        <UserPlus className="w-5 h-5 mr-3" /> Create Account
+                        <UserPlus className="w-5 h-5 mr-3" /> Sign Up
                       </Link>
                     </>
                   )}
