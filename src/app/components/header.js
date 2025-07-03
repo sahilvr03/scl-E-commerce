@@ -19,6 +19,7 @@ import {
   Package,
   LogIn,
   UserPlus,
+  Heart,
 } from 'lucide-react';
 
 export default function Header() {

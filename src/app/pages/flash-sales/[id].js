@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import CountdownTimer from '../../components/CountdownTimer';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 export default function FlashSaleDetailPage() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function FlashSaleDetailPage() {
         transition={{ duration: 0.4 }}
         className="grid grid-cols-1 md:grid-cols-2 gap-8"
       >
-        <img
+        <Image
           src={product.imageUrl}
           alt={product.title}
           className="rounded-lg shadow-md w-full h-auto"

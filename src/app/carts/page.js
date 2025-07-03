@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Trash2 } from 'lucide-react';
+import Image from 'next/image';
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState([]);
@@ -74,10 +75,12 @@ export default function CartPage() {
               key={item.productId}
               className="flex items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md"
             >
-              <img
+              <Image
                 src={item.product.imageUrl}
                 alt={item.product.title}
                 className="w-20 h-20 object-cover rounded-md mr-4"
+                width={80}
+                height={80}
               />
               <div className="flex-grow">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{item.product.title}</h3>
