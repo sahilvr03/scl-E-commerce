@@ -155,7 +155,7 @@ System: '',
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Admin Dashboard</h1>
+       
 
         {/* Product Form */}
         <motion.section
@@ -164,7 +164,7 @@ System: '',
           transition={{ delay: 0.2, duration: 0.5 }}
           className="mb-12 bg-white p-6 rounded-lg shadow-md"
         >
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Add New Product</h2>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Add New Sale</h2>
           <form onSubmit={handleProductSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700">Title</label>
@@ -285,48 +285,7 @@ System: '',
           </form>
         </motion.section>
 
-        {/* Category Form */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="bg-white p-6 rounded-lg shadow-md"
-          id="category"
-        >
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Add New Category</h2>
-          <form onSubmit={handleCategorySubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Category Name</label>
-              <input
-                type="text"
-                name="name"
-                value={category.name}
-                onChange={handleCategoryChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Icon URL</label>
-              <input
-                type="text"
-                name="icon"
-                value={category.icon}
-                onChange={handleCategoryChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <button
-                type="submit"
-                className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-300"
-              >
-                Add Category
-              </button>
-            </div>
-          </form>
-        </motion.section>
+       
       </motion.div>
     </>
   );

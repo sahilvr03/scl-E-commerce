@@ -1,67 +1,124 @@
 'use client';
-import React from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
+import { ShoppingCart, Star, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star } from 'lucide-react';
 
-const ProductCard = ({ product }) => {
-  // Optimize Cloudinary image URL with transformations (e.g., resize to 300x300)
-  const optimizedImageUrl = product.imageUrl
-    ? `${product.imageUrl.split('/upload/')[0]}/upload/w_300,h_300,c_fill/${product.imageUrl.split('/upload/')[1]}`
-    : '/placeholder.jpg';
+export default function ProductCard({ product }) {
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleAddToCart = async () => {
+    setLoading(true);
+    try {
+      const sessionResponse = await fetch('/api/auth/session', {
+        credentials: 'include',
+      });
+
+      if (!sessionResponse.ok || !(await sessionResponse.json()).session) {
+        toast.error('Please log in to add items to your cart.');
+        router.push(`/login?redirect=/products/${product._id}`);
+        return;
+      }
+
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ productId: product._id, quantity: 1 }),
+      });
+
+      if (response.ok) {
+        toast.success('Added to cart!');
+        const cart = await (await fetch('/api/cart', { credentials: 'include' })).json();
+        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: cart.items.length } }));
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to add to cart.');
+      }
+    } catch (error) {
+      toast.error('An unexpected error occurred.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBuyNow = () => {
+    router.push(`/checkout?productId=${product._id}&quantity=1`);
+  };
 
   return (
-    <Link href={`/products/${product._id}`} className="group">
-      <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col transform group-hover:-translate-y-1">
-        <div className="relative aspect-square bg-gray-50 dark:bg-gray-700 overflow-hidden">
-          <Image
-            width={300}
-            height={300}
-            src={optimizedImageUrl}
-            alt={product.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-            priority
-          />
-          {product.discount && (
-            <span className="absolute top-3 left-3 bg-teal-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-full shadow-lg animate-pulse">
-              -{product.discount}% OFF
-            </span>
-          )}
-        </div>
-        <div className="p-4 flex flex-col flex-grow">
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 line-clamp-2 leading-tight">
+    <div className="relative bg-white rounded-lg shadow-md overflow-hidden group transition hover:shadow-lg">
+      <Link href={`/products/${product._id}`} className="block">
+        <Image
+          src={product.imageUrl || '/placeholder.jpg'}
+          alt={product.title}
+          width={400}
+          height={400}
+          className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      </Link>
+
+      {product.discount && (
+        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+          -{product.discount}%
+        </span>
+      )}
+
+      <div className="p-4">
+        <Link href={`/products/${product._id}`}>
+          <h3 className="text-lg font-semibold text-gray-800 line-clamp-2">
             {product.title}
           </h3>
-          <div className="mt-auto">
-            <div className="flex items-baseline space-x-2 mb-2">
-              <p className="text-xl font-extrabold text-teal-700 dark:text-teal-400">
-                {product.price}
-              </p>
+        </Link>
+
+        <p className="text-sm text-gray-600 line-clamp-2 mt-1">
+          {product.description}
+        </p>
+
+        <div className="flex items-center justify-between mt-3">
+          <div>
+            <p className="text-teal-600 font-bold text-lg">
+              ${product.price}
               {product.originalPrice && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                  {product.originalPrice}
-                </p>
+                <span className="ml-2 text-sm line-through text-gray-500">
+                  ${product.originalPrice}
+                </span>
               )}
-            </div>
-            <div className="flex items-center">
-              <div className="flex">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-4 h-4 ${i < product.rating ? 'text-yellow-500' : 'text-gray-300 dark:text-gray-600'}`}
-                    fill={i < product.rating ? 'currentColor' : 'none'}
-                  />
-                ))}
-              </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                ({product.reviews} reviews)
-              </span>
-            </div>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {[...Array(5)].map((_, i) => (
+              <Star
+                key={i}
+                className={`w-4 h-4 ${i < product.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+              />
+            ))}
           </div>
         </div>
-      </div>
-    </Link>
-  );
-};
 
-export default ProductCard;
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={handleAddToCart}
+            disabled={loading}
+            className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm px-4 py-2 rounded-md flex items-center justify-center disabled:opacity-50"
+          >
+            <ShoppingCart className="w-4 h-4 mr-1" />
+            {loading ? 'Adding...' : 'Add to Cart'}
+          </button>
+
+          <button
+            onClick={handleBuyNow}
+            className="flex-1 bg-white border border-teal-600 text-teal-600 hover:bg-gray-100 text-sm px-4 py-2 rounded-md flex items-center justify-center"
+          >
+            <Zap className="w-4 h-4 mr-1" />
+            Buy Now
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

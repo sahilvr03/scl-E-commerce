@@ -1,10 +1,6 @@
-// pages/signup.js (Pages Router)
-// OR
-// app/signup/page.jsx (App Router)
-
 'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // For App Router
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
@@ -16,6 +12,30 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session', {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.session && data.session.user) {
+            if (data.session.user.role === 'admin') {
+              router.push('/admin');
+            } else {
+              router.push('/');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+      }
+    };
+    checkSession();
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +58,7 @@ export default function SignupPage() {
 
       if (response.ok) {
         toast.success(data.message || 'Registration successful! Please log in.');
-        router.push('/login'); // Redirect to login page after successful registration
+        router.push('/login');
       } else {
         toast.error(data.message || 'Registration failed.');
       }
@@ -56,7 +76,9 @@ export default function SignupPage() {
         <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">Sign Up</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Name
+            </label>
             <input
               type="text"
               id="name"
@@ -67,7 +89,9 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Email
+            </label>
             <input
               type="email"
               id="email"
@@ -78,7 +102,9 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Password
+            </label>
             <input
               type="password"
               id="password"
@@ -89,7 +115,9 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm Password</label>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Confirm Password
+            </label>
             <input
               type="password"
               id="confirmPassword"
@@ -101,16 +129,23 @@ export default function SignupPage() {
           </div>
           <button
             type="submit"
-            className="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50"
             disabled={loading}
+            className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 rounded-lg transition duration-300 flex items-center justify-center disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin mr-2" size={20} /> : 'Sign Up'}
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Signing Up...
+              </>
+            ) : (
+              'Sign Up'
+            )}
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-teal-600 hover:text-teal-500 dark:text-teal-400 dark:hover:text-teal-300">
-            Login
+          <Link href="/login" className="text-teal-600 dark:text-teal-400 hover:underline">
+            Log in
           </Link>
         </p>
       </div>
