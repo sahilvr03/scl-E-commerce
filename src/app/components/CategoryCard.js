@@ -1,11 +1,9 @@
-
 'use client';
 import React, { useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 
-const CategoryCard = ({name, categories = [] }) => {
+const CategoryCard = ({ categories = [], onCategoryChange }) => {
   const [activeTab, setActiveTab] = useState(0);
 
   const tabVariants = {
@@ -22,36 +20,37 @@ const CategoryCard = ({name, categories = [] }) => {
   return (
     <div className="flex flex-wrap justify-center gap-4 bg-white rounded-xl shadow-md p-4">
       {categories.slice(0, 6).map((category, index) => (
-        <Link key={category._id} href={`/categories/${category._id}`}>
-          <motion.div
-            className="flex items-center space-x-2 px-4 py-2 rounded-lg cursor-pointer relative"
-            variants={tabVariants}
-            initial="inactive"
-            animate={activeTab === index ? 'active' : 'inactive'}
-            whileHover="hover"
-            onClick={() => setActiveTab(index)}
-          >
-            <Image
-              width={24}
-              height={24}
-              src={'/ad1.webp'}
-              alt={name}
-              className="object-contain w-6 h-6"
+        <motion.div
+          key={category._id || index}
+          className="flex items-center space-x-2 px-4 py-2 rounded-lg cursor-pointer relative"
+          variants={tabVariants}
+          initial="inactive"
+          animate={activeTab === index ? 'active' : 'inactive'}
+          whileHover="hover"
+          onClick={() => {
+            setActiveTab(index);
+            onCategoryChange(category.name);
+          }}
+        >
+          <Image
+            width={24}
+            height={24}
+            src={'/ad1.webp'}
+            alt={category.name}
+            className="object-contain w-6 h-6"
+          />
+          <span className="text-sm font-semibold text-gray-800">
+            {category.name}
+          </span>
+          {activeTab === index && (
+            <motion.div
+              className="absolute bottom-0 left-0 h-0.5 bg-teal-600"
+              variants={underlineVariants}
+              animate="visible"
+              layoutId="underline"
             />
-            <span className="text-sm font-semibold text-gray-800">
-              {category.name}
-            </span>
-            {activeTab === index && (
-              <motion.div
-                className="absolute bottom-0 left-0 h-0.5 bg-teal-600"
-                variants={underlineVariants}
-               
-                animate="visible"
-                layoutId="underline"
-              />
-            )}
-          </motion.div>
-        </Link>
+          )}
+        </motion.div>
       ))}
     </div>
   );

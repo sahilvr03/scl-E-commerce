@@ -63,6 +63,8 @@ function HomePage() {
   const [userDetails, setUserDetails] = useState(null);
   const [error, setError] = useState(null);
   const [loadingFlashSales, setLoadingFlashSales] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const router = useRouter();
 
   const getTokenFromCookies = () => {
@@ -82,6 +84,18 @@ function HomePage() {
     const interval = setInterval(nextSlide, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Add this useEffect to filter products when category changes
+useEffect(() => {
+  if (selectedCategory) {
+    const filtered = justForYouProducts.filter(
+      product => product.category === selectedCategory
+    );
+    setFilteredProducts(filtered);
+  } else {
+    setFilteredProducts(justForYouProducts);
+  }
+}, [selectedCategory, justForYouProducts]);
 
   useEffect(() => {
     async function fetchData() {
@@ -351,20 +365,7 @@ function HomePage() {
           </div>
         </div>
 
-        <section className="mb-12">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Shop by Category</h2>
-            <Link
-              href="/categories"
-              className="text-teal-600 hover:text-teal-700 flex items-center text-sm font-medium"
-            >
-              View all <ChevronRight className="ml-1 h-4 w-4" />
-            </Link>
-          </div>
-          <CategoryCard categories={categories} />
-        </section>
-
-        <section className="mb-12 bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-xl">
+                <section className="mb-12 bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-xl">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
             <div className="flex items-center mb-4 sm:mb-0">
               <div className="bg-teal-100 p-2 rounded-lg mr-4">
@@ -410,10 +411,11 @@ function HomePage() {
             </div>
           )}
         </section>
-
         <section className="mb-12">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Recommended For You</h2>
+            <h2 className="text-2xl font-bold text-gray-800">
+              {selectedCategory ? `${selectedCategory} Products` : 'Recommended For You'}
+            </h2>
             <Link
               href="/products"
               className="text-teal-600 hover:text-teal-700 flex items-center text-sm font-medium"
@@ -421,8 +423,12 @@ function HomePage() {
               View all <ChevronRight className="ml-1 h-4 w-4" />
             </Link>
           </div>
+          <CategoryCard 
+            categories={categories} 
+            onCategoryChange={setSelectedCategory}
+          />
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {justForYouProducts.map((product) => (
+            {(selectedCategory ? filteredProducts : justForYouProducts).map((product) => (
               <ProductCard
                 key={product._id}
                 product={product}
