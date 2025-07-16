@@ -45,7 +45,7 @@ export default function LoginForm() {
         if (sessionData.session && sessionData.session.user) {
           if (sessionData.session.user.role === 'admin') {
             toast.success('Admin login successful! Redirecting to dashboard...');
-            router.push('/admin');
+            router.push('/pages/admin');
           } else {
             toast.success('Welcome back! Continue shopping.');
             router.push(redirect);
