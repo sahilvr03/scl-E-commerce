@@ -2,317 +2,195 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { ShoppingCart, Star, Zap } from 'lucide-react';
+import { ShoppingCart, Star, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import Tilt from 'react-parallax-tilt';
+import CountdownTimer from './CountdownTimer';
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, isSale = false }) {
   const [loading, setLoading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(null);
-  const [orderDetails, setOrderDetails] = useState({
-    name: '',
-    city: '',
-    address: '',
-    town: '',
-    phone: '',
-    altPhone: '',
-  });
   const router = useRouter();
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = async (e) => {
+    e.stopPropagation();
     setLoading(true);
     try {
-      const sessionResponse = await fetch('/api/auth/session', {
-        credentials: 'include',
-      });
-
-      if (!sessionResponse.ok || !(await sessionResponse.json()).session) {
-        toast.error('Please log in to add items to your cart.');
-        router.push(`/login?redirect=/products/${product._id}`);
-        return;
-      }
-
       const response = await fetch('/api/cart', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: product._id,
+          quantity: 1,
+        }),
         credentials: 'include',
-        body: JSON.stringify({ productId: product._id, quantity: 1 }),
       });
 
-      if (response.ok) {
-        toast.success('Added to cart!');
-        const cart = await (await fetch('/api/cart', { credentials: 'include' })).json();
-        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: cart.items.length } }));
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.message || 'Failed to add to cart.');
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Received non-JSON response from cart API');
+        }
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to add to cart');
       }
+      toast.success(`${product.title} added to cart!`, {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #F85606',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(248, 86, 6, 0.2)',
+        },
+        iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
+      });
     } catch (error) {
-      toast.error('An unexpected error occurred.');
+      console.error('Error adding to cart:', error);
+      toast.error(error.message || 'Failed to add to cart', {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #EF4444',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+        },
+        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleBuyNow = () => {
-    setIsModalOpen(true);
-  };
+  const displayPrice = parseFloat(product.price || 0);
+  const originalPrice = product.originalPrice ? parseFloat(product.originalPrice) : null;
+  const discount = (originalPrice && displayPrice)
+    ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
+    : product.discount || 0;
 
-  const handlePaymentMethod = (method) => {
-    setPaymentMethod(method);
-    if (method === 'online') {
-      toast.success('Redirecting to payment gateway...');
-      setIsModalOpen(false);
-      // Implement online payment logic here (e.g., redirect to payment gateway)
+  const getBadge = () => {
+    switch (product.type) {
+      case 'forYou':
+        return (
+          <motion.div
+            className="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 500 }}
+          >
+            For You
+          </motion.div>
+        );
+      case 'recommended':
+        return (
+          <motion.div
+            className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 500 }}
+          >
+            Recommended
+          </motion.div>
+        );
+      case 'flashSale':
+        return (
+          <motion.div
+            className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 500 }}
+          >
+            {discount > 0 ? `${discount}% OFF` : 'Flash Sale'}
+          </motion.div>
+        );
+      default:
+        return null;
     }
   };
 
-  const handleOrderDetailsChange = (e) => {
-    setOrderDetails({ ...orderDetails, [e.target.name]: e.target.value });
-  };
+  const optimizedImageUrl = product.images?.[0]
+  ? `${product.images[0].split('/upload/')[0]}/upload/w_300,h_300,c_fill/${product.images[0].split('/upload/')[1]}`
+  : product.imageUrl && product.imageUrl.trim() !== ''
+  ? `${product.imageUrl.split('/upload/')[0]}/upload/w_300,h_300,c_fill/${product.imageUrl.split('/upload/')[1]}`
+  : '/placeholder.jpg';
 
-  const handleOrderSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          productId: product._id,
-          quantity: 1,
-          paymentMethod,
-          shippingDetails: orderDetails,
-          status: 'Pending',
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to place order');
-      }
-
-      toast.success('Order placed successfully!');
-      setIsModalOpen(false);
-      setPaymentMethod(null);
-      setOrderDetails({
-        name: '',
-        city: '',
-        address: '',
-        town: '',
-        phone: '',
-        altPhone: '',
-      });
-    } catch (error) {
-      console.error('Error placing order:', error);
-      toast.error(error.message || 'Failed to place order');
-    }
-  };
-
-  return (
-    <>
-      <div className="relative bg-white rounded-lg shadow-md overflow-hidden group transition hover:shadow-lg">
-        <Link href={`/products/${product._id}`} className="block">
-          <Image
-            src={product.imageUrl || '/placeholder.jpg'}
-            alt={product.title}
-            width={400}
-            height={400}
-            className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+return (
+  <Tilt tiltMaxAngleX={10} tiltMaxAngleY={10} scale={1.05} transitionSpeed={500}>
+    <motion.div
+      className="relative bg-white rounded-xl shadow-md overflow-hidden group transition-all duration-300 hover:shadow-lg hover:-translate-y-2 flex flex-col h-full"
+      whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(248, 86, 6, 0.2)' }}
+      transition={{ type: 'spring', stiffness: 400 }}
+    >
+      <Link href={`/products/${product._id}`} className="block flex-grow">
+        <div className="relative w-full aspect-square overflow-hidden">
+          {optimizedImageUrl && (
+            <Image
+              src={optimizedImageUrl}
+              alt={product.title || 'Product Image'}
+              width={300}
+              height={300}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              priority={isSale}
+            />
+          )}
+          <motion.div
+            className="absolute inset-0 bg-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0 }}
+            whileHover={{ opacity: 1 }}
           />
-        </Link>
-
-        {product.discount && (
-          <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-            -{product.discount}%
-          </span>
-        )}
-
-        <div className="p-4">
-          <Link href={`/products/${product._id}`}>
-            <h3 className="text-lg font-semibold text-gray-800 line-clamp-2">{product.title}</h3>
-          </Link>
-
-          <p className="text-sm text-gray-600 line-clamp-2 mt-1">{product.description}</p>
-
-          <div className="flex items-center justify-between mt-3">
-            <div>
-              <p className="text-teal-600 font-bold text-lg">
-                ${product.price}
-                {product.originalPrice && (
-                  <span className="ml-2 text-sm line-through text-gray-500">
-                    ${product.originalPrice}
-                  </span>
-                )}
-              </p>
-            </div>
-
+          {getBadge()}
+          {product.type === 'flashSale' && product.endDate && (
+            <motion.div
+              className="absolute bottom-0 w-full text-white text-center text-xs py-1 font-medium"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 300 }}
+            >
+              
+            </motion.div>
+          )}
+        </div>
+        <div className="p-2 flex flex-col flex-grow">
+          <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 mb-1 leading-tight">
+            {product.title || 'Unnamed Product'}
+          </h3>
+          <div className="flex items-baseline gap-1 mb-1">
+            <p className="text-orange-600 font-bold text-base">${displayPrice.toFixed(2)}</p>
+            {originalPrice && (
+              <p className="text-gray-500 line-through text-xs">${originalPrice.toFixed(2)}</p>
+            )}
+          </div>
+          <div className="flex items-center justify-between text-xs text-gray-600">
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
-                  className={`w-4 h-4 ${i < product.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                  className={`w-3 h-3 ${i < (product.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
                 />
               ))}
+              <span>({product.reviews || 0} reviews)</span>
             </div>
           </div>
-
-          <div className="flex gap-2 mt-4">
-            <button
-              onClick={handleAddToCart}
-              disabled={loading}
-              className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm px-4 py-2 rounded-md flex items-center justify-center disabled:opacity-50"
-            >
-              <ShoppingCart className="w-4 h-4 mr-1" />
-              {loading ? 'Adding...' : 'Add to Cart'}
-            </button>
-
-            <button
-              onClick={handleBuyNow}
-              className="flex-1 bg-white border border-teal-600 text-teal-600 hover:bg-gray-100 text-sm px-4 py-2 rounded-md flex items-center justify-center"
-            >
-              <Zap className="w-4 h-4 mr-1" />
-              Buy Now
-            </button>
-          </div>
         </div>
+      </Link>
+      <div className="p-2">
+        <motion.button
+          onClick={handleAddToCart}
+          disabled={loading}
+          className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-xs font-medium px-2 py-2 rounded-lg flex items-center justify-center gap-1 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50"
+          whileHover={{ scale: 1.05, boxShadow: '0 4px 12px rgba(248, 86, 6, 0.3)' }}
+          whileTap={{ scale: 0.95 }}
+        >
+          {loading ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <ShoppingCart className="w-3 h-3" />
+          )}
+          {loading ? 'Adding...' : 'Add to Cart'}
+        </motion.button>
       </div>
-
-      {/* COD Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300 }}
-            >
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Choose Payment Method</h2>
-              {!paymentMethod ? (
-                <div className="space-y-4">
-                  <motion.button
-                    onClick={() => handlePaymentMethod('cod')}
-                    className="w-full bg-teal-600 text-white py-3 rounded-lg hover:bg-teal-700 transition-colors"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Cash on Delivery
-                  </motion.button>
-                  <motion.button
-                    onClick={() => handlePaymentMethod('online')}
-                    className="w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Online Payment
-                  </motion.button>
-                  <motion.button
-                    onClick={() => setIsModalOpen(false)}
-                    className="w-full text-gray-600 dark:text-gray-400 underline"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Cancel
-                  </motion.button>
-                </div>
-              ) : paymentMethod === 'cod' ? (
-                <form onSubmit={handleOrderSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={orderDetails.name}
-                      onChange={handleOrderDetailsChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">City</label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={orderDetails.city}
-                      onChange={handleOrderDetailsChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Address</label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={orderDetails.address}
-                      onChange={handleOrderDetailsChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Town</label>
-                    <input
-                      type="text"
-                      name="town"
-                      value={orderDetails.town}
-                      onChange={handleOrderDetailsChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={orderDetails.phone}
-                      onChange={handleOrderDetailsChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Alternative Phone Number</label>
-                    <input
-                      type="tel"
-                      name="altPhone"
-                      value={orderDetails.altPhone}
-                      onChange={handleOrderDetailsChange}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-                    />
-                  </div>
-                  <motion.button
-                    type="submit"
-                    className="w-full bg-teal-600 text-white py-3 rounded-lg hover:bg-teal-700 transition-colors"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Place Order
-                  </motion.button>
-                  <motion.button
-                    onClick={() => setPaymentMethod(null)}
-                    className="w-full text-gray-600 dark:text-gray-400 underline"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Back
-                  </motion.button>
-                </form>
-              ) : null}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
-  );
+    </motion.div>
+  </Tilt>
+);
 }

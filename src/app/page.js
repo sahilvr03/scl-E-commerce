@@ -20,6 +20,8 @@ import {
   ChevronRight,
   LogOut,
   ArrowRight,
+  Loader2,
+  Star,
 } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import ProductCard from './components/ProductCard';
@@ -31,40 +33,44 @@ import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 const promotions = [
   {
     id: 1,
-    title: "Spectacular Summer Savings: Up To 70% Off!",
-    description:
-      "Unbeatable deals on your favorite brands. Don’t miss out, offers are for a limited time!",
-    image: "/ad1.webp",
+    title: 'Spectacular Summer Savings: Up To 70% Off!',
+    description: 'Unbeatable deals on your favorite brands. Don’t miss out, offers are for a limited time!',
+    image: '/ad1.webp',
   },
   {
     id: 2,
-    title: "Anime Collection: New Drops Available Now!",
-    description:
-      "Fresh drop shoulder tees inspired by your favorite anime heroes. Shop now!",
-    image: "/ad2.webp",
+    title: 'Anime Collection: New Drops Available Now!',
+    description: 'Fresh drop shoulder tees inspired by your favorite anime heroes. Shop now!',
+    image: '/ad2.webp',
   },
   {
     id: 3,
-    title: "Flash Sale: 50% Off All Tees!",
-    description: "Only for 48 hours! Grab your style before it’s gone.",
-    image: "/ad3.webp",
+    title: 'Flash Sale: 50% Off All Tees!',
+    description: 'Only for 48 hours! Grab your style before it’s gone.',
+    image: '/ad3.webp',
   },
 ];
 
-function HomePage() {
+export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [flashSaleItems, setFlashSaleItems] = useState([]);
+  const [recommendedItems, setRecommendedItems] = useState([]);
+  const [forYouItems, setForYouItems] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [justForYouProducts, setJustForYouProducts] = useState([]);
   const [current, setCurrent] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
   const [error, setError] = useState(null);
-  const [loadingFlashSales, setLoadingFlashSales] = useState(true);
+  const [loading, setLoading] = useState({
+    flashSales: true,
+    recommended: true,
+    forYou: true,
+    categories: true,
+  });
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [filteredRecommended, setFilteredRecommended] = useState([]);
   const router = useRouter();
 
   const getTokenFromCookies = () => {
@@ -77,25 +83,20 @@ function HomePage() {
   };
 
   const nextSlide = () => setCurrent((prev) => (prev + 1) % promotions.length);
-  const prevSlide = () =>
-    setCurrent((prev) => (prev - 1 + promotions.length) % promotions.length);
+  const prevSlide = () => setCurrent((prev) => (prev - 1 + promotions.length) % promotions.length);
 
   useEffect(() => {
     const interval = setInterval(nextSlide, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  // Add this useEffect to filter products when category changes
-useEffect(() => {
-  if (selectedCategory) {
-    const filtered = justForYouProducts.filter(
-      product => product.category === selectedCategory
-    );
-    setFilteredProducts(filtered);
-  } else {
-    setFilteredProducts(justForYouProducts);
-  }
-}, [selectedCategory, justForYouProducts]);
+  useEffect(() => {
+    if (selectedCategory) {
+      setFilteredRecommended(recommendedItems.filter((product) => product.category === selectedCategory));
+    } else {
+      setFilteredRecommended(recommendedItems);
+    }
+  }, [selectedCategory, recommendedItems]);
 
   useEffect(() => {
     async function fetchData() {
@@ -107,30 +108,24 @@ useEffect(() => {
       }
 
       const token = getTokenFromCookies();
-      console.log('Token from cookies:', token);
       let userId = null;
 
       if (token) {
         try {
           const response = await fetch('/api/auth/session', {
             credentials: 'include',
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           });
-          console.log('Session API response status:', response.status);
           const contentType = response.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
             throw new Error('Received non-JSON response from session API');
           }
           const data = await response.json();
-          console.log('Session API response data:', data);
           if (response.ok && data.session) {
             userId = data.session.user.id;
             setIsLoggedIn(true);
             setUserDetails(data.session.user);
           } else {
-            console.log('No valid session, redirecting to login');
             if (router.pathname !== '/pages/login') {
               toast.error('Please log in to continue');
               router.push('/pages/login');
@@ -151,7 +146,6 @@ useEffect(() => {
           return;
         }
       } else {
-        console.log('No token found, user not logged in');
         setCartCount(0);
         setIsLoggedIn(false);
         setUserDetails(null);
@@ -160,9 +154,7 @@ useEffect(() => {
       if (userId) {
         try {
           const response = await fetch(`/api/cart?userId=${userId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           });
           const contentType = response.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
@@ -189,55 +181,63 @@ useEffect(() => {
         }
       }
 
-      // Fetch flash sale items
+      // Fetch Flash Sale items
       try {
-        const response = await fetch('/api/flashSales', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-        });
-        console.log('Flash Sales API Response Status:', response.status);
+        const response = await fetch('/api/products?type=flashSale');
         const data = await response.json();
-        console.log('Flash Sales API Response Data:', data);
         if (response.ok) {
           const now = new Date();
           const activeFlashSales = data
             .filter((sale) => {
               const endDate = new Date(sale.endDate);
-              const isValid = !isNaN(endDate.getTime()) && endDate > now;
-              console.log(`Sale: ${sale.title}, End Date: ${endDate}, Valid: ${isValid}`);
-              return isValid;
+              return !isNaN(endDate.getTime()) && endDate > now;
             })
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) // Sort by latest first
-            .slice(0, 5); // Limit to 5 items
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 20);
           setFlashSaleItems(activeFlashSales);
-          if (activeFlashSales.length === 0) {
-            console.log('No active flash sales found.');
-          }
         } else {
-          throw new Error(data.error || 'Failed to fetch flash sales');
+          throw new Error(data.error || 'Failed to fetch Flash Sale products');
         }
       } catch (error) {
-        console.error('Error fetching flash sales:', error);
-        setError('Failed to load flash sales. Please try again later.');
-        toast.error('Failed to load flash sales');
+        console.error('Error fetching Flash Sale products:', error);
+        setError('Failed to load Flash Sale products. Please try again later.');
+        toast.error('Failed to load Flash Sale products');
       } finally {
-        setLoadingFlashSales(false);
+        setLoading((prev) => ({ ...prev, flashSales: false }));
       }
 
-      // Fetch regular products
+      // Fetch Recommended items
       try {
-        const response = await fetch('/api/products');
+        const response = await fetch('/api/products?type=recommended');
         const data = await response.json();
         if (response.ok) {
-          setJustForYouProducts(data.slice(0, 10)); // Show up to 10 regular products
+          setRecommendedItems(data.slice(0, 20));
         } else {
-          throw new Error('Failed to fetch products');
+          throw new Error(data.error || 'Failed to fetch Recommended products');
         }
       } catch (error) {
-        console.error('Error fetching products:', error);
-        setError('Failed to load products. Please try again later.');
-        toast.error('Failed to load products');
+        console.error('Error fetching Recommended products:', error);
+        setError('Failed to load Recommended products. Please try again later.');
+        toast.error('Failed to load Recommended products');
+      } finally {
+        setLoading((prev) => ({ ...prev, recommended: false }));
+      }
+
+      // Fetch For You items
+      try {
+        const response = await fetch('/api/products?type=forYou');
+        const data = await response.json();
+        if (response.ok) {
+          setForYouItems(data.slice(0, 20));
+        } else {
+          throw new Error(data.error || 'Failed to fetch For You products');
+        }
+      } catch (error) {
+        console.error('Error fetching For You products:', error);
+        setError('Failed to load For You products. Please try again later.');
+        toast.error('Failed to load For You products');
+      } finally {
+        setLoading((prev) => ({ ...prev, forYou: false }));
       }
 
       // Fetch categories
@@ -247,12 +247,14 @@ useEffect(() => {
         if (response.ok) {
           setCategories(data);
         } else {
-          throw new Error('Failed to fetch categories');
+          throw new Error(data.error || 'Failed to fetch categories');
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
         setError('Failed to load categories. Please try again later.');
         toast.error('Failed to load categories');
+      } finally {
+        setLoading((prev) => ({ ...prev, categories: false }));
       }
     }
 
@@ -271,7 +273,16 @@ useEffect(() => {
         method: 'POST',
       });
       if (response.ok) {
-        toast.success('Logged out successfully!');
+        toast.success('Logged out successfully!', {
+          style: {
+            background: '#FFFFFF',
+            color: '#1F2937',
+            border: '1px solid #F85606',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(248, 86, 6, 0.2)',
+          },
+          iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
+        });
         setIsLoggedIn(false);
         setUserDetails(null);
         setCartCount(0);
@@ -279,19 +290,54 @@ useEffect(() => {
         router.push('/pages/login');
       } else {
         const errorData = await response.json();
-        toast.error(errorData.message || 'Logout failed.');
+        toast.error(errorData.message || 'Logout failed.', {
+          style: {
+            background: '#FFFFFF',
+            color: '#1F2937',
+            border: '1px solid #EF4444',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+          },
+          iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+        });
       }
     } catch (error) {
       console.error('Error during logout:', error);
-      toast.error('An error occurred during logout.');
+      toast.error('An error occurred during logout.', {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #EF4444',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+        },
+        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+      });
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.08 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 400, damping: 20 } },
+  };
+
   return (
-    <div className="min-h-screen font-sans text-gray-800 bg-gray-50 transition-colors duration-300">
+    <div className="min-h-screen font-poppins bg-white text-gray-800">
       <Toaster position="top-center" />
-      <main className="container mx-auto px-4 py-6">
-        <div className="relative w-full h-64 sm:h-80 md:h-[28rem] rounded-2xl overflow-hidden shadow-xl border border-gray-200 dark:border-gray-700 mb-6 group">
+    
+     
+
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
+        {/* Hero Carousel */}
+        <div className="relative w-full h-64 sm:h-80 md:h-[28rem] rounded-2xl overflow-hidden shadow-xl border border-gray-200 mb-8 group">
           <AnimatePresence mode="wait">
             <motion.div
               key={promotions[current].id}
@@ -300,9 +346,7 @@ useEffect(() => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.6 }}
               className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${promotions[current].image})`,
-              }}
+              style={{ backgroundImage: `url(${promotions[current].image})` }}
             >
               <div className="w-full h-full bg-gradient-to-r from-black/70 via-black/50 to-transparent flex items-center px-6 sm:px-12">
                 <div className="max-w-xl space-y-5">
@@ -310,7 +354,7 @@ useEffect(() => {
                     initial={{ y: 30, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="text-2xl sm:text-4xl font-extrabold text-white drop-shadow-md"
+                    className="text-2xl sm:text-4xl font-bold text-white drop-shadow-md"
                   >
                     {promotions[current].title}
                   </motion.h1>
@@ -327,52 +371,56 @@ useEffect(() => {
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.6 }}
                   >
-                    <button className="bg-teal-500 hover:bg-teal-600 text-white font-semibold px-6 py-3 rounded-full transition-all duration-300 shadow-lg flex items-center">
-                      Shop Now
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </button>
+                    <Link href="/products">
+                      <button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-300 shadow-md flex items-center">
+                        Shop Now
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </button>
+                    </Link>
                   </motion.div>
                 </div>
               </div>
             </motion.div>
           </AnimatePresence>
-
-          {/* Navigation Arrows */}
-          <button
+          <motion.button
             onClick={prevSlide}
             className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 p-2 rounded-full text-white transition-all duration-300"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             <FiChevronLeft size={22} />
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             onClick={nextSlide}
             className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 p-2 rounded-full text-white transition-all duration-300"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             <FiChevronRight size={22} />
-          </button>
-
-          {/* Dot Indicators */}
+          </motion.button>
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
             {promotions.map((_, idx) => (
-              <button
+              <motion.button
                 key={idx}
                 onClick={() => setCurrent(idx)}
                 className={`h-2.5 rounded-full transition-all duration-300 ${
-                  current === idx ? 'bg-white w-6' : 'bg-white/40 w-2.5'
+                  current === idx ? 'bg-orange-500 w-6' : 'bg-white/40 w-2.5'
                 }`}
+                whileHover={{ scale: 1.2 }}
               />
             ))}
           </div>
         </div>
 
-                <section className="mb-12 bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-xl">
+        {/* Flash Sale Section */}
+        <section className="mb-12 bg-gradient-to-r from-orange-50 to-orange-100 p-6 rounded-xl">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
             <div className="flex items-center mb-4 sm:mb-0">
-              <div className="bg-teal-100 p-2 rounded-lg mr-4">
-                <Zap className="h-6 w-6 text-teal-600" fill="currentColor" />
+              <div className="bg-orange-100 p-2 rounded-lg mr-4">
+                <Zap className="h-6 w-6 text-orange-600" fill="currentColor" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Flash Sale</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Flash Sale</h2>
                 {flashSaleItems.length > 0 && (
                   <CountdownTimer
                     endDate={flashSaleItems[0].endDate}
@@ -383,64 +431,244 @@ useEffect(() => {
             </div>
             <Link
               href="/pages/flashSalesUsers"
-              className="bg-white hover:bg-gray-50 text-teal-600 px-4 py-2 rounded-lg flex items-center text-sm font-medium shadow-sm"
+              className="bg-white hover:bg-gray-50 text-orange-600 px-4 py-2 rounded-lg flex items-center text-sm font-medium shadow-sm"
             >
               View all <ChevronRight className="ml-1 h-4 w-4" />
             </Link>
           </div>
-          {loadingFlashSales && <p className="text-gray-600">Loading flash sales...</p>}
-          {error && <p className="text-red-500 mb-4">{error}</p>}
-          {!loadingFlashSales && flashSaleItems.length === 0 && !error && (
-            <p className="text-gray-600">No active flash sales available.</p>
-          )}
-          {flashSaleItems.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {flashSaleItems.map((sale) => (
-                <div key={sale._id} className="relative">
-                  <ProductCard
-                    product={sale}
-                    showDiscountBadge={true}
-                    className="bg-white hover:shadow-md transition-all"
-                  />
-                  {/* <CountdownTimer
-                    endDate={sale.endDate}
-                    className="absolute top-6 right-2 text-xs text-red-600 font-semibold"
-                  /> */}
-                </div>
-              ))}
+          {loading.flashSales ? (
+            <div className="flex justify-center items-center h-40">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+              >
+                <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
+              </motion.div>
             </div>
+          ) : error && flashSaleItems.length === 0 ? (
+            <motion.div
+              className="text-center py-8"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, type: 'spring', stiffness: 300 }}
+            >
+              <p className="text-lg text-gray-600 mb-4">{error}</p>
+            </motion.div>
+          ) : flashSaleItems.length === 0 ? (
+            <motion.div
+              className="text-center py-8"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, type: 'spring', stiffness: 300 }}
+            >
+              <svg
+                className="w-16 h-16 mx-auto text-orange-500 mb-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+              <p className="text-lg text-gray-600 mb-4">No active Flash Sales available.</p>
+              <Link href="/products">
+                <motion.button
+                  className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-md"
+                  whileHover={{ scale: 1.05, boxShadow: '0 4px 12px rgba(248, 86, 6, 0.3)' }}
+                  whileTap={{ scale: 0.95 }}
+                  animate={{ scale: [1, 1.03, 1], transition: { repeat: Infinity, duration: 1.5 } }}
+                >
+                  Explore All Products
+                </motion.button>
+              </Link>
+            </motion.div>
+          ) : (
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {flashSaleItems.map((sale) => (
+                <motion.div key={sale._id} variants={itemVariants}>
+                  <ProductCard product={sale} isSale={true} />
+                </motion.div>
+              ))}
+            </motion.div>
           )}
         </section>
-        <section className="mb-12">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">
-              {selectedCategory ? `${selectedCategory} Products` : 'Recommended For You'}
-            </h2>
+
+        {/* Recommended Section */}
+        <section className="mb-12 bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-xl">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <div className="flex items-center mb-4 sm:mb-0">
+              <div className="bg-green-100 p-2 rounded-lg mr-4">
+                <Star className="h-6 w-6 text-green-600" fill="currentColor" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                {selectedCategory ? `${selectedCategory} Products` : 'Recommended For You'}
+              </h2>
+            </div>
             <Link
-              href="/products"
-              className="text-teal-600 hover:text-teal-700 flex items-center text-sm font-medium"
+              href="/pages/recommended"
+              className="bg-white hover:bg-gray-50 text-orange-600 px-4 py-2 rounded-lg flex items-center text-sm font-medium shadow-sm"
             >
               View all <ChevronRight className="ml-1 h-4 w-4" />
             </Link>
           </div>
-          <CategoryCard 
-            categories={categories} 
-            onCategoryChange={setSelectedCategory}
-          />
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {(selectedCategory ? filteredProducts : justForYouProducts).map((product) => (
-              <ProductCard
-                key={product._id}
-                product={product}
-                showDiscountBadge={false}
-                className="bg-white hover:shadow-md transition-all"
-              />
-            ))}
+          {/* <CategoryCard categories={categories} onCategoryChange={setSelectedCategory} /> */}
+          {loading.recommended ? (
+            <div className="flex justify-center items-center h-40">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+              >
+                <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
+              </motion.div>
+            </div>
+          ) : error && recommendedItems.length === 0 ? (
+            <motion.div
+              className="text-center py-8"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, type: 'spring', stiffness: 300 }}
+            >
+              <p className="text-lg text-gray-600 mb-4">{error}</p>
+            </motion.div>
+          ) : recommendedItems.length === 0 ? (
+            <motion.div
+              className="text-center py-8"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, type: 'spring', stiffness: 300 }}
+            >
+              <svg
+                className="w-16 h-16 mx-auto text-orange-500 mb-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+              <p className="text-lg text-gray-600 mb-4">No recommended products available.</p>
+              <Link href="/products">
+                <motion.button
+                  className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-md"
+                  whileHover={{ scale: 1.05, boxShadow: '0 4px 12px rgba(248, 86, 6, 0.3)' }}
+                  whileTap={{ scale: 0.95 }}
+                  animate={{ scale: [1, 1.03, 1], transition: { repeat: Infinity, duration: 1.5 } }}
+                >
+                  Explore All Products
+                </motion.button>
+              </Link>
+            </motion.div>
+          ) : (
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {filteredRecommended.map((product) => (
+                <motion.div key={product._id} variants={itemVariants}>
+                  <ProductCard product={product} />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </section>
+
+        {/* For You Section */}
+        <section className="mb-12 bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-xl">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <div className="flex items-center mb-4 sm:mb-0">
+              <div className="bg-blue-100 p-2 rounded-lg mr-4">
+                <Heart className="h-6 w-6 text-blue-600" fill="currentColor" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">For You</h2>
+            </div>
+            <Link
+              href="/pages/forYou"
+              className="bg-white hover:bg-gray-50 text-orange-600 px-4 py-2 rounded-lg flex items-center text-sm font-medium shadow-sm"
+            >
+              View all <ChevronRight className="ml-1 h-4 w-4" />
+            </Link>
           </div>
+          {loading.forYou ? (
+            <div className="flex justify-center items-center h-40">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+              >
+                <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
+              </motion.div>
+            </div>
+          ) : error && forYouItems.length === 0 ? (
+            <motion.div
+              className="text-center py-8"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, type: 'spring', stiffness: 300 }}
+            >
+              <p className="text-lg text-gray-600 mb-4">{error}</p>
+            </motion.div>
+          ) : forYouItems.length === 0 ? (
+            <motion.div
+              className="text-center py-8"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, type: 'spring', stiffness: 300 }}
+            >
+              <svg
+                className="w-16 h-16 mx-auto text-orange-500 mb-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+              <p className="text-lg text-gray-600 mb-4">No products available for you.</p>
+              <Link href="/products">
+                <motion.button
+                  className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-md"
+                  whileHover={{ scale: 1.05, boxShadow: '0 4px 12px rgba(248, 86, 6, 0.3)' }}
+                  whileTap={{ scale: 0.95 }}
+                  animate={{ scale: [1, 1.03, 1], transition: { repeat: Infinity, duration: 1.5 } }}
+                >
+                  Explore All Products
+                </motion.button>
+              </Link>
+            </motion.div>
+          ) : (
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {forYouItems.map((product) => (
+                <motion.div key={product._id} variants={itemVariants}>
+                  <ProductCard product={product} />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
         </section>
       </main>
     </div>
   );
 }
-
-export default HomePage;
