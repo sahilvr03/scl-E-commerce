@@ -247,7 +247,7 @@ export default function Navbar() {
               <form onSubmit={handleSearch} className="relative w-full">
                 <input
                   type="text"
-                  placeholder="Search for products, categories, brands..."
+                  placeholder="Search for products, categories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full py-2.5 pl-12 pr-10 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-300 shadow-sm"
@@ -388,7 +388,7 @@ export default function Navbar() {
                 <form onSubmit={handleSearch} className="relative">
                   <input
                     type="text"
-                    placeholder="Search for products, categories, brands..."
+                    placeholder="Search for products,categories"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full py-2.5 pl-12 pr-10 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-300 shadow-sm"

@@ -11,7 +11,6 @@ import {
   ChevronUp,
   Send,
   X,
- 
 } from 'lucide-react';
 
 export default function Footer() {
@@ -22,6 +21,7 @@ export default function Footer() {
     aboutUs: false,
     shop: false,
   });
+  const [isClient, setIsClient] = useState(false);
 
   // Footer link data (replace with API fetch if available)
   const footerLinks = {
@@ -45,14 +45,21 @@ export default function Footer() {
     ],
   };
 
+  // Set isClient to true on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Sync dark mode with localStorage
   useEffect(() => {
-    const darkMode = localStorage.getItem('darkMode') === 'true';
-    setIsDarkMode(darkMode);
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (typeof document !== 'undefined') {
+      const darkMode = localStorage.getItem('darkMode') === 'true';
+      setIsDarkMode(darkMode);
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
   }, []);
 
@@ -161,7 +168,7 @@ export default function Footer() {
               </span>
             </motion.button>
             <AnimatePresence>
-              {(openSections.customerService || window.innerWidth >= 768) && (
+              {(openSections.customerService || isClient) && (
                 <motion.ul
                   id="customer-service-links"
                   className="space-y-3"
@@ -204,7 +211,7 @@ export default function Footer() {
               </span>
             </motion.button>
             <AnimatePresence>
-              {(openSections.aboutUs || window.innerWidth >= 768) && (
+              {(openSections.aboutUs || isClient) && (
                 <motion.ul
                   id="about-us-links"
                   className="space-y-3"
@@ -247,7 +254,7 @@ export default function Footer() {
               </span>
             </motion.button>
             <AnimatePresence>
-              {(openSections.shop || window.innerWidth >= 768) && (
+              {(openSections.shop || isClient) && (
                 <motion.ul
                   id="shop-links"
                   className="space-y-3"

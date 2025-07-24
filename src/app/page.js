@@ -73,15 +73,6 @@ export default function HomePage() {
   const [filteredRecommended, setFilteredRecommended] = useState([]);
   const router = useRouter();
 
-  const getTokenFromCookies = () => {
-    const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-      const [name, value] = cookie.trim().split('=');
-      acc[name] = value;
-      return acc;
-    }, {});
-    return cookies.token || null;
-  };
-
   const nextSlide = () => setCurrent((prev) => (prev + 1) % promotions.length);
   const prevSlide = () => setCurrent((prev) => (prev - 1 + promotions.length) % promotions.length);
 
@@ -101,15 +92,27 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchData() {
       setError(null);
+
+      // Handle cookie access for token
+      let token = null;
+      let userId = null;
+      if (typeof document !== 'undefined') {
+        const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+          const [name, value] = cookie.trim().split('=');
+          acc[name] = value;
+          return acc;
+        }, {});
+        token = cookies.token || null;
+      }
+
+      // Skip session check if on login or signup pages
       if (router.pathname === '/pages/login' || router.pathname === '/pages/signup') {
         setIsLoggedIn(false);
         setUserDetails(null);
         return;
       }
 
-      const token = getTokenFromCookies();
-      let userId = null;
-
+      // Fetch user session
       if (token) {
         try {
           const response = await fetch('/api/auth/session', {
@@ -151,6 +154,7 @@ export default function HomePage() {
         setUserDetails(null);
       }
 
+      // Fetch cart count
       if (userId) {
         try {
           const response = await fetch(`/api/cart?userId=${userId}`, {
@@ -260,11 +264,14 @@ export default function HomePage() {
 
     fetchData();
 
-    const handleCartUpdate = (e) => {
-      setCartCount(e.detail.count);
-    };
-    window.addEventListener('cartUpdated', handleCartUpdate);
-    return () => window.removeEventListener('cartUpdated', handleCartUpdate);
+    // Handle cart update event listener
+    if (typeof window !== 'undefined') {
+      const handleCartUpdate = (e) => {
+        setCartCount(e.detail.count);
+      };
+      window.addEventListener('cartUpdated', handleCartUpdate);
+      return () => window.removeEventListener('cartUpdated', handleCartUpdate);
+    }
   }, [router]);
 
   const handleLogout = async () => {
@@ -286,7 +293,9 @@ export default function HomePage() {
         setIsLoggedIn(false);
         setUserDetails(null);
         setCartCount(0);
-        document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
+        if (typeof document !== 'undefined') {
+          document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
+        }
         router.push('/pages/login');
       } else {
         const errorData = await response.json();
@@ -332,8 +341,6 @@ export default function HomePage() {
   return (
     <div className="min-h-screen font-poppins bg-white text-gray-800">
       <Toaster position="top-center" />
-    
-     
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
         {/* Hero Carousel */}
