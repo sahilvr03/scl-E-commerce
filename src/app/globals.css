@@ -24,3 +24,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+@media (max-width: 380px) {
+  .nav-xs-hidden {
+    display: none !important;
+  }
+
+  .nav-xs-text-sm {
+    font-size: 0.75rem !important; /* text-xs */
+  }
+
+  .nav-xs-px {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+}
