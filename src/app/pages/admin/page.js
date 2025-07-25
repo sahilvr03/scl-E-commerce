@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package, Plus, Edit, Trash2, X, Loader2, Search } from 'lucide-react';
+import Image from 'next/image';
 
 export default function AdminPage() {
   const [product, setProduct] = useState({
@@ -411,7 +412,7 @@ export default function AdminPage() {
                     >
                       <td className="px-6 py-4">
                         {prod.images?.[0] ? (
-                          <img src={prod.images[0]} alt={prod.title} className="w-12 h-12 object-cover rounded" />
+                          <Image src={prod.images[0]} alt={prod.title} className="w-12 h-12 object-cover rounded" />
                         ) : (
                           <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center">
                             <span className="text-xs">No Image</span>
@@ -476,7 +477,7 @@ export default function AdminPage() {
                   transition={{ duration: 0.3 }}
                 >
                   {cat.icon ? (
-                    <img src={cat.icon} alt={cat.name} className="w-12 h-12 object-cover rounded mr-4" />
+                    <Image src={cat.icon} alt={cat.name} className="w-12 h-12 object-cover rounded mr-4" />
                   ) : (
                     <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center mr-4">
                       <span className="text-xs">No Icon</span>
@@ -773,7 +774,7 @@ export default function AdminPage() {
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Existing Images:</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {product.images.map((img, index) => (
-                            <img key={index} src={img} alt={`Image ${index + 1}`} className="w-24 h-24 object-cover rounded-lg" />
+                            <Image key={index} src={img} alt={`Image ${index + 1}`} className="w-24 h-24 object-cover rounded-lg" />
                           ))}
                         </div>
                       </div>
