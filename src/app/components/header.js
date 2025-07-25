@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -37,7 +37,9 @@ export default function Navbar() {
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false); // New state for profile dropdown
   const router = useRouter();
+  const dropdownRef = useRef(null); // Ref to track the dropdown
 
   // Persist dark mode in local storage
   useEffect(() => {
@@ -204,6 +206,17 @@ export default function Navbar() {
     setSearchQuery('');
   };
 
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <>
       {error && (
@@ -288,7 +301,7 @@ export default function Navbar() {
                 <span className="ml-2 text-sm font-medium hidden lg:inline text-gray-700 dark:text-gray-200">Orders</span>
               </Link>
               {isLoggedIn ? (
-                <div className="relative group">
+                <div className="relative group" onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
                   <Link
                     href="/account"
                     className="flex items-center p-2 rounded-lg hover:bg-orange-100 dark:hover:bg-gray-800 transition-colors duration-300"
@@ -303,26 +316,31 @@ export default function Navbar() {
                     </span>
                   </Link>
                   <motion.div
-                    className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-xl rounded-lg py-2 z-60 border border-gray-200 dark:border-gray-700 hidden group-hover:block"
+                    ref={dropdownRef}
+                    className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-xl rounded-lg py-2 z-60 border border-gray-200 dark:border-gray-700"
                     initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
+                    animate={{ opacity: profileDropdownOpen ? 1 : 0, y: profileDropdownOpen ? 0 : -10 }}
+                    transition={{ duration: 0.2 }}
                   >
                     <Link
                       href="/account"
                       className="block px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200"
+                      onClick={() => setProfileDropdownOpen(false)}
                     >
                       Profile
                     </Link>
                     <Link
                       href="/wishlist"
                       className="block px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200"
+                      onClick={() => setProfileDropdownOpen(false)}
                     >
                       Wishlist
                     </Link>
                     <button
-                      onClick={handleLogout}
+                      onClick={() => {
+                        handleLogout();
+                        setProfileDropdownOpen(false);
+                      }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200"
                     >
                       Logout
@@ -364,15 +382,6 @@ export default function Navbar() {
                   )}
                 </motion.div>
               </Link>
-              {/* <motion.button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-lg hover:bg-orange-100 dark:hover:bg-gray-800 transition-colors duration-300"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                aria-label="Toggle dark mode"
-              >
-                
-              </motion.button> */}
             </div>
           </div>
           {/* Mobile Search Bar */}
@@ -388,7 +397,7 @@ export default function Navbar() {
                 <form onSubmit={handleSearch} className="relative">
                   <input
                     type="text"
-                    placeholder="Search for products,categories"
+                    placeholder="Search for products, categories..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full py-2.5 pl-12 pr-10 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-300 shadow-sm"
@@ -433,15 +442,17 @@ export default function Navbar() {
               <motion.div
                 className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-xl rounded-lg py-2 z-60 border border-gray-200 dark:border-gray-700 hidden group-hover:block"
                 initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
+                animate={{ opacity: categoryMenuOpen ? 1 : 0, y: categoryMenuOpen ? 0 : -10 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
+                onMouseEnter={() => setCategoryMenuOpen(true)}
+                onMouseLeave={() => setCategoryMenuOpen(false)}
               >
                 {categories.length > 0 ? (
                   categories.map((category) => (
                     <Link
                       key={category._id}
-                      href={`/categories/${category._id}`}
+                      href={`/pages/CategoryPage/${category._id}`}
                       className="block px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200"
                     >
                       {category.name}
@@ -489,21 +500,21 @@ export default function Navbar() {
                       <Home className="w-5 h-5 mr-3" /> Home
                     </Link>
                     <Link
-                      href="/pages/flashSalePage"
+                      href="/pages/FlashSalePage"
                       className="block py-2 px-3 rounded-lg text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200 flex items-center text-sm"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <Zap className="w-5 h-5 mr-3" /> Flash Sale
                     </Link>
                     <Link
-                      href="/pages/recommendedPage"
+                      href="/pages/RecommendedPage"
                       className="block py-2 px-3 rounded-lg text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200 flex items-center text-sm"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <Star className="w-5 h-5 mr-3" /> Recommended
                     </Link>
                     <Link
-                      href="/pages/forYouPage"
+                      href="/pages/ForYouPage"
                       className="block py-2 px-3 rounded-lg text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200 flex items-center text-sm"
                       onClick={() => setMobileMenuOpen(false)}
                     >
@@ -530,7 +541,7 @@ export default function Navbar() {
                               categories.map((category) => (
                                 <Link
                                   key={category._id}
-                                  href={`/categories/${category._id}`}
+                                  href={`/pages/categoryPage/${category._id}`}
                                   className="block py-2 px-3 rounded-lg text-sm text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200"
                                   onClick={() => setMobileMenuOpen(false)}
                                 >

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Star, ShoppingCart, ChevronLeft, Heart, ShieldCheck, Loader2, Package, Tag, Scale, Info } from 'lucide-react';
+import { Star, ShoppingCart, ChevronLeft, Heart, ShieldCheck, Loader2, Package, Tag, Scale, Info, ShoppingBag } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,12 +27,13 @@ export default function ProductDetailPage() {
     phone: '',
     altPhone: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/product/${params.id}`);
+        const response = await fetch(`/api/product/${params.id}`, { credentials: 'include' });
         if (!response.ok) {
           const contentType = response.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
@@ -45,7 +46,16 @@ export default function ProductDetailPage() {
         setProduct(data);
       } catch (error) {
         console.error('Error fetching product:', error);
-        toast.error(error.message || 'Failed to load product');
+        toast.error(error.message || 'Failed to load product', {
+          style: {
+            background: '#FFFFFF',
+            color: '#1F2937',
+            border: '1px solid #EF4444',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+          },
+          iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+        });
       } finally {
         setIsLoading(false);
       }
@@ -53,7 +63,9 @@ export default function ProductDetailPage() {
 
     const fetchRelatedProducts = async () => {
       try {
-        const response = await fetch(`/api/products?category=${encodeURIComponent(product?.category || 'Electronics')}&limit=4`);
+        const response = await fetch(`/api/products?category=${encodeURIComponent(product?.category || 'Electronics')}&limit=4`, {
+          credentials: 'include',
+        });
         if (!response.ok) {
           const contentType = response.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
@@ -66,19 +78,43 @@ export default function ProductDetailPage() {
         setRelatedProducts(data.products || []);
       } catch (error) {
         console.error('Error fetching related products:', error);
-        toast.error('Failed to load related products');
+        toast.error('Failed to load related products', {
+          style: {
+            background: '#FFFFFF',
+            color: '#1F2937',
+            border: '1px solid #EF4444',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+          },
+          iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+        });
       }
     };
 
     if (params.id) {
       fetchProduct();
-      if (product?.category) {
-        fetchRelatedProducts();
-      }
+    }
+    if (product?.category) {
+      fetchRelatedProducts();
     }
   }, [params.id, product?.category]);
 
   const handleAddToCart = async () => {
+    if (!product?.inStock) {
+      toast.error('Product is out of stock', {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #EF4444',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+        },
+        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const response = await fetch('/api/cart', {
         method: 'POST',
@@ -110,13 +146,12 @@ export default function ProductDetailPage() {
         iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
       });
 
-      // Dispatch custom event only on the client side
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: quantity } }));
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error(error.message || 'Something went wrong!', {
+      toast.error(error.message || 'Failed to add to cart', {
         style: {
           background: '#FFFFFF',
           color: '#1F2937',
@@ -126,15 +161,10 @@ export default function ProductDetailPage() {
         },
         iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    // This useEffect ensures that window-related logic is only executed on the client side
-    if (typeof window !== 'undefined') {
-      // You can add additional window-related logic here if needed in the future
-    }
-  }, []);
 
   const toggleWishlist = () => {
     setIsWishlisted(!isWishlisted);
@@ -151,6 +181,19 @@ export default function ProductDetailPage() {
   };
 
   const handleBuyNow = () => {
+    if (!product?.inStock) {
+      toast.error('Product is out of stock', {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #EF4444',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+        },
+        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+      });
+      return;
+    }
     setIsModalOpen(true);
   };
 
@@ -177,6 +220,21 @@ export default function ProductDetailPage() {
 
   const handleOrderSubmit = async (e) => {
     e.preventDefault();
+    if (!orderDetails.name || !orderDetails.city || !orderDetails.address || !orderDetails.town || !orderDetails.phone) {
+      toast.error('Please fill all required fields', {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #EF4444',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+        },
+        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const response = await fetch('/api/orders', {
         method: 'POST',
@@ -232,6 +290,8 @@ export default function ProductDetailPage() {
         },
         iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -319,23 +379,23 @@ export default function ProductDetailPage() {
                 variants={imageVariants}
               >
                 <AnimatePresence mode="wait">
-  <motion.div
-    key={selectedImage}
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    transition={{ duration: 0.3 }}
-  >
-    <Image
-      src={(product.images?.[selectedImage] || product.imageUrl || '').trim() || '/placeholder.jpg'}
-      alt={product.title || 'Product Image'}
-      width={300}
-      height={300}
-      className="object-cover w-full aspect-square rounded-xl"
-      priority
-    />
-  </motion.div>
-</AnimatePresence>
+                  <motion.div
+                    key={selectedImage}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Image
+                      src={(product.images?.[selectedImage] || product.imageUrl || '').trim() || '/placeholder.jpg'}
+                      alt={product.title || 'Product Image'}
+                      width={300}
+                      height={300}
+                      className="object-cover w-full aspect-square rounded-xl"
+                      priority
+                    />
+                  </motion.div>
+                </AnimatePresence>
               </motion.div>
             </Tilt>
             {product.images && product.images.length > 1 && (
@@ -378,7 +438,7 @@ export default function ProductDetailPage() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.4 }}
                 >
-                  {product.title}
+                  {product.title || 'Unnamed Product'}
                 </motion.h1>
                 <motion.p
                   className="text-xs sm:text-sm text-gray-500 mt-1"
@@ -412,14 +472,18 @@ export default function ProductDetailPage() {
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className={`w-4 h-4 sm:w-5 h-5 ${i < product.rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                    fill={i < product.rating ? 'currentColor' : 'none'}
+                    className={`w-4 h-4 sm:w-5 h-5 ${i < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}
+                    fill={i < (product.rating || 0) ? 'currentColor' : 'none'}
                   />
                 ))}
                 <span className="ml-1 text-xs sm:text-sm text-gray-600">({product.reviews || 0} reviews)</span>
               </div>
               <motion.span
-                className="text-xs sm:text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded-full font-medium"
+                className={`text-xs sm:text-sm px-2 py-1 rounded-full font-medium ${
+                  product.inStock
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
+                }`}
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 500 }}
@@ -482,6 +546,7 @@ export default function ProductDetailPage() {
                     className="px-2 sm:px-4 py-1 sm:py-2 bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition-colors duration-200"
                     whileHover={buttonHover}
                     whileTap={buttonTap}
+                    disabled={isSubmitting}
                   >
                     -
                   </motion.button>
@@ -491,12 +556,14 @@ export default function ProductDetailPage() {
                     value={quantity}
                     onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
                     className="w-12 sm:w-16 px-2 py-1 sm:py-2 text-center bg-white text-gray-900 border-x border-gray-300"
+                    disabled={isSubmitting}
                   />
                   <motion.button
                     onClick={() => setQuantity(quantity + 1)}
                     className="px-2 sm:px-4 py-1 sm:py-2 bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition-colors duration-200"
                     whileHover={buttonHover}
                     whileTap={buttonTap}
+                    disabled={isSubmitting}
                   >
                     +
                   </motion.button>
@@ -512,21 +579,26 @@ export default function ProductDetailPage() {
             >
               <motion.button
                 onClick={handleAddToCart}
-                className="w-full flex items-center justify-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium px-4 py-2 sm:px-6 sm:py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
+                className="w-full flex items-center justify-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium px-4 py-2 sm:px-6 sm:py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50"
                 whileHover={buttonHover}
                 whileTap={buttonTap}
-                disabled={!product.inStock}
+                disabled={isSubmitting || !product.inStock}
               >
-                <ShoppingCart className="w-4 h-4 sm:w-5 h-5 mr-1 sm:mr-2" />
-                Add to Cart
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 sm:w-5 h-5 mr-1 sm:mr-2 animate-spin" />
+                ) : (
+                  <ShoppingCart className="w-4 h-4 sm:w-5 h-5 mr-1 sm:mr-2" />
+                )}
+                {isSubmitting ? 'Adding...' : 'Add to Cart'}
               </motion.button>
               <motion.button
                 onClick={handleBuyNow}
-                className="w-full flex items-center justify-center bg-white border-2 border-orange-500 hover:bg-orange-50 text-orange-600 font-medium px-4 py-2 sm:px-6 sm:py-3 rounded-lg transition-colors duration-300 shadow-md hover:shadow-lg"
+                className="w-full flex items-center justify-center bg-white border-2 border-orange-500 hover:bg-orange-50 text-orange-600 font-medium px-4 py-2 sm:px-6 sm:py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50"
                 whileHover={buttonHover}
-                whileTap={buttonTap}
-                disabled={!product.inStock}
+                whileTap={{ scale: 0.95 }}
+                disabled={isSubmitting || !product.inStock}
               >
+                <ShoppingBag className="w-4 h-4 sm:w-5 h-5 mr-1 sm:mr-2" />
                 Buy Now
               </motion.button>
             </motion.div>
@@ -539,7 +611,7 @@ export default function ProductDetailPage() {
             >
               <div className="flex items-center space-x-2 sm:space-x-3 text-sm sm:text-base text-gray-600">
                 <ShieldCheck className="w-4 h-4 sm:w-5 h-5 text-orange-500" />
-                <span>30-day money back guarantee</span>
+                <span>30-day money back guarantee</ span>
               </div>
             </motion.div>
           </motion.div>
@@ -648,6 +720,7 @@ export default function ProductDetailPage() {
                     className="text-gray-600 hover:text-orange-600"
                     whileHover={{ scale: 1.2 }}
                     whileTap={{ scale: 0.9 }}
+                    disabled={isSubmitting}
                   >
                     <svg className="w-5 h-5 sm:w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -658,17 +731,19 @@ export default function ProductDetailPage() {
                   <div className="space-y-2">
                     <motion.button
                       onClick={() => handlePaymentMethod('cod')}
-                      className="w-full bg-orange-500 text-white py-2 sm:py-3 rounded-lg hover:bg-orange-600 transition-colors duration-200 shadow-md"
+                      className="w-full bg-orange-500 text-white py-2 sm:py-3 rounded-lg hover:bg-orange-600 transition-colors duration-200 shadow-md disabled:opacity-50"
                       whileHover={buttonHover}
                       whileTap={buttonTap}
+                      disabled={isSubmitting}
                     >
                       Cash on Delivery
                     </motion.button>
                     <motion.button
                       onClick={() => handlePaymentMethod('online')}
-                      className="w-full bg-white border-2 border-orange-500 text-orange-600 py-2 sm:py-3 rounded-lg hover:bg-orange-50 transition-colors duration-200 shadow-md"
+                      className="w-full bg-white border-2 border-orange-500 text-orange-600 py-2 sm:py-3 rounded-lg hover:bg-orange-50 transition-colors duration-200 shadow-md disabled:opacity-50"
                       whileHover={buttonHover}
                       whileTap={buttonTap}
+                      disabled={isSubmitting}
                     >
                       Online Payment
                     </motion.button>
@@ -677,6 +752,7 @@ export default function ProductDetailPage() {
                       className="w-full text-gray-600 underline hover:text-orange-600 transition-colors duration-200"
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.98 }}
+                      disabled={isSubmitting}
                     >
                       Cancel
                     </motion.button>
@@ -684,7 +760,7 @@ export default function ProductDetailPage() {
                 ) : paymentMethod === 'cod' ? (
                   <form onSubmit={handleOrderSubmit} className="space-y-2">
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700">Name</label>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700">Name *</label>
                       <input
                         type="text"
                         name="name"
@@ -692,10 +768,11 @@ export default function ProductDetailPage() {
                         onChange={handleOrderDetailsChange}
                         required
                         className="w-full px-3 py-1 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700">City</label>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700">City *</label>
                       <input
                         type="text"
                         name="city"
@@ -703,10 +780,11 @@ export default function ProductDetailPage() {
                         onChange={handleOrderDetailsChange}
                         required
                         className="w-full px-3 py-1 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700">Address</label>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700">Address *</label>
                       <input
                         type="text"
                         name="address"
@@ -714,10 +792,11 @@ export default function ProductDetailPage() {
                         onChange={handleOrderDetailsChange}
                         required
                         className="w-full px-3 py-1 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700">Town</label>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700">Town *</label>
                       <input
                         type="text"
                         name="town"
@@ -725,10 +804,11 @@ export default function ProductDetailPage() {
                         onChange={handleOrderDetailsChange}
                         required
                         className="w-full px-3 py-1 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700">Phone Number</label>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700">Phone Number *</label>
                       <input
                         type="tel"
                         name="phone"
@@ -736,6 +816,7 @@ export default function ProductDetailPage() {
                         onChange={handleOrderDetailsChange}
                         required
                         className="w-full px-3 py-1 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div>
@@ -746,21 +827,27 @@ export default function ProductDetailPage() {
                         value={orderDetails.altPhone}
                         onChange={handleOrderDetailsChange}
                         className="w-full px-3 py-1 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
+                        disabled={isSubmitting}
                       />
                     </div>
                     <motion.button
                       type="submit"
-                      className="w-full bg-orange-500 text-white py-2 sm:py-3 rounded-lg hover:bg-orange-600 transition-colors duration-200 shadow-md"
+                      className="w-full bg-orange-500 text-white py-2 sm:py-3 rounded-lg hover:bg-orange-600 transition-colors duration-200 shadow-md disabled:opacity-50"
                       whileHover={buttonHover}
                       whileTap={buttonTap}
+                      disabled={isSubmitting}
                     >
-                      Place Order
+                      {isSubmitting ? (
+                        <Loader2 className="w-4 h-4 sm:w-5 h-5 inline-block mr-2 animate-spin" />
+                      ) : null}
+                      {isSubmitting ? 'Placing Order...' : 'Place Order'}
                     </motion.button>
                     <motion.button
                       onClick={() => setPaymentMethod(null)}
                       className="w-full text-gray-600 underline hover:text-orange-600 transition-colors duration-200"
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.98 }}
+                      disabled={isSubmitting}
                     >
                       Back
                     </motion.button>

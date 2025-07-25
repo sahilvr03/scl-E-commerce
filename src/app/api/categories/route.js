@@ -1,56 +1,65 @@
+// /api/categories
 import { connectToDatabase } from '../../lib/mongodb';
-import jwt from 'jsonwebtoken';
-import { ObjectId } from 'mongodb';
-
-async function authenticate(req) {
-  const token = req.headers.get('authorization')?.split('Bearer ')[1];
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return decoded.id;
-  } catch (error) {
-    throw new Error('Invalid or expired token');
-  }
-}
 
 export async function GET(req) {
   try {
     const { db } = await connectToDatabase();
     const categoriesCollection = db.collection('categories');
-
     const categories = await categoriesCollection.find({}).toArray();
-    return new Response(JSON.stringify(categories), { status: 200 });
+    return new Response(JSON.stringify(categories), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Categories GET error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch categories' }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
 
 export async function POST(req) {
   try {
-    const userId = await authenticate(req);
     const { db } = await connectToDatabase();
-    const usersCollection = db.collection('users');
-    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    const categoryData = await req.json();
 
-    if (user.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 403 });
+    // Validate required fields
+    if (!categoryData.name) {
+      return new Response(JSON.stringify({ error: 'Category name is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    const categoryData = await req.json();
-    const categoriesCollection = db.collection('categories');
+    // Validate icon (optional, must be a valid URL if provided)
+    if (categoryData.icon && !/^https?:\/\/.*\.(?:png|jpg|jpeg|svg|gif)$/i.test(categoryData.icon)) {
+      return new Response(JSON.stringify({ error: 'Invalid icon URL format' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-    const result = await categoriesCollection.insertOne({
+    const category = {
       ...categoryData,
       createdAt: new Date(),
       updatedAt: new Date(),
-    });
+    };
+    const categoriesCollection = db.collection('categories');
+    const result = await categoriesCollection.insertOne(category);
 
-    return new Response(JSON.stringify({ message: 'Category added successfully!', categoryId: result.insertedId }), { status: 201 });
+    return new Response(
+      JSON.stringify({ message: 'Category added successfully!', categoryId: result.insertedId, ...category }),
+      {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   } catch (error) {
     console.error('Categories POST error:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to add category' }), { status: 400 });
+    return new Response(JSON.stringify({ error: error.message || 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }

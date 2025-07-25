@@ -1,3 +1,4 @@
+// pages/admin/categories.js
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -17,15 +18,16 @@ export default function CategoriesPage() {
         const response = await fetch('/api/auth/session', {
           credentials: 'include',
         });
-        if (response.ok) {
-          const data = await response.json();
-          if (!data.session || !data.session.user || data.session.user.role !== 'admin') {
-            toast.error('Access denied. Admins only.');
-            router.push('/login?redirect=/pages/admin/categories');
-          }
-        } else {
+        if (!response.ok) {
           toast.error('Please log in as an admin.');
           router.push('/login?redirect=/pages/admin/categories');
+          return;
+        }
+        const data = await response.json();
+        if (!data.session || !data.session.user || data.session.user.role !== 'admin') {
+          toast.error('Access denied. Admins only.');
+          router.push('/login?redirect=/pages/admin/categories');
+          return;
         }
       } catch (error) {
         console.error('Session check error:', error);
@@ -45,17 +47,27 @@ export default function CategoriesPage() {
     try {
       const response = await fetch('/api/categories', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(category),
-        credentials: 'include',
+        credentials: 'include', // Keep for session consistency
       });
-      if (response.ok) {
-        toast.success('Category added successfully!');
-        setCategory({ name: '', icon: '' });
-      } else {
-        const errorData = await response.json();
+
+      if (!response.ok) {
+        const text = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          throw new Error(`Server returned non-JSON response: ${text.slice(0, 100)}...`);
+        }
         throw new Error(errorData.error || 'Failed to add category');
       }
+
+      const data = await response.json();
+      toast.success(data.message || 'Category added successfully!');
+      setCategory({ name: '', icon: '' });
     } catch (error) {
       console.error('Error adding category:', error);
       toast.error(error.message || 'Failed to add category');
@@ -101,12 +113,14 @@ export default function CategoriesPage() {
             />
           </div>
           <div className="md:col-span-2">
-            <button
+            <motion.button
               type="submit"
               className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               Add Category
-            </button>
+            </motion.button>
           </div>
         </form>
       </motion.section>

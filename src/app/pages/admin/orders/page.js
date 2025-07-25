@@ -4,16 +4,33 @@ import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { Loader2, Package } from 'lucide-react';
 
-
-export default function AdminOrdersPage() {
+export default function UserOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [leopardOrders, setLeopardOrders] = useState([]);
+
+  useEffect(() => {
+    const fetchLeopardOrders = async () => {
+      try {
+        const res = await fetch('/api/leopard/orders');
+        const data = await res.json();
+        console.log('Leopard orders:', data);
+
+        const parcels = Array.isArray(data) ? data : data.trackBookedPacketResult || [];
+        setLeopardOrders(parcels);
+      } catch (err) {
+        console.error('Error loading Leopard data:', err.message);
+      }
+    };
+
+    fetchLeopardOrders();
+  }, []);
 
   useEffect(() => {
     const fetchOrders = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/admin/orders', {
+        const response = await fetch('/api/orders', {
           credentials: 'include',
         });
 
@@ -42,37 +59,6 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  const handleStatusChange = async (orderId, newStatus) => {
-    try {
-      const response = await fetch(`/api/admin/orders/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type');
-        let errorMessage = 'Failed to update order status';
-        if (contentType && contentType.includes('application/json')) {
-          const data = await response.json();
-          errorMessage = data.message || errorMessage;
-        } else {
-          console.error('Non-JSON response:', await response.text());
-        }
-        throw new Error(errorMessage);
-      }
-
-      setOrders(orders.map((order) =>
-        order._id === orderId ? { ...order, status: newStatus } : order
-      ));
-      toast.success('Order status updated!');
-    } catch (error) {
-      console.error('Error updating order status:', error.message);
-      toast.error(error.message || 'Failed to update order status');
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -88,18 +74,17 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-      
       <div className="container mx-auto px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin: All Orders</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">My Orders</h1>
           {orders.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-400">No orders found.</p>
+            <p className="text-gray-600 dark:text-gray-400">You have no orders yet.</p>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-6">
               {orders.map((order) => (
                 <motion.div
                   key={order._id}
@@ -108,34 +93,40 @@ export default function AdminOrdersPage() {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Package className="w-6 h-6 text-teal-500" />
-                      <div>
-                        <p className="text-lg font-medium text-gray-900 dark:text-white">Order #{order._id}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Product ID: {order.productId}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Quantity: {order.quantity}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Payment: {order.paymentMethod}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Status: {order.status}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Customer: {order.shippingDetails?.name || 'N/A'}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Address: {order.shippingDetails?.address || 'N/A'}, {order.shippingDetails?.town || 'N/A'}, {order.shippingDetails?.city || 'N/A'}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Ordered: {new Date(order.createdAt).toLocaleString()}</p>
-                      </div>
+                  <div className="flex items-start space-x-3">
+                    <Package className="w-6 h-6 text-teal-500 mt-1" />
+                    <div>
+                      <p className="text-lg font-medium text-gray-900 dark:text-white">Order #{order._id}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Product ID: {order.productId}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Quantity: {order.quantity}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Payment: {order.paymentMethod}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Status: {order.status}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Address: {order.shippingDetails?.address || 'N/A'}, {order.shippingDetails?.town || 'N/A'}, {order.shippingDetails?.city || 'N/A'}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Ordered: {new Date(order.createdAt).toLocaleString()}</p>
                     </div>
-                    <select
-                      value={order.status}
-                      onChange={(e) => handleStatusChange(order._id, e.target.value)}
-                      className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Processing">Processing</option>
-                      <option value="Shipped">Shipped</option>
-                      <option value="Delivered">Delivered</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
                   </div>
+
+                  {/* Leopard Orders */}
+                  {leopardOrders.length > 0 && (
+                    <>
+                      <h2 className="text-xl font-semibold text-gray-800 dark:text-white mt-6 mb-2">Leopard Parcels</h2>
+                      <div className="grid gap-4">
+                        {leopardOrders.map((parcel, index) => (
+                          <div
+                            key={index}
+                            className="bg-gray-100 dark:bg-gray-700 rounded-md p-3 border border-gray-200 dark:border-gray-600"
+                          >
+                            <p className="text-sm text-gray-700 dark:text-gray-200">CN: {parcel.consignmentNo}</p>
+                            <p className="text-sm text-gray-700 dark:text-gray-200">Status: {parcel.status}</p>
+                            <p className="text-sm text-gray-700 dark:text-gray-200">Destination: {parcel.destinationCity}</p>
+                            <p className="text-sm text-gray-700 dark:text-gray-200">Booked On: {parcel.bookingDate}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               ))}
             </div>
