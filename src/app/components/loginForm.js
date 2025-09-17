@@ -252,12 +252,7 @@ const handleSubmit = async (e) => {
               transition={{ delay: 0.7 }}
               className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-center"
             >
-              <button
-                type="button"
-                className="text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200"
-              >
-                Forgot your password?
-              </button>
+              
             </motion.div>
           </div>
         </motion.div>
