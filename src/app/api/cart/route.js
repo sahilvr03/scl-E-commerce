@@ -1,5 +1,3 @@
-// ✅ FILE: app/api/cart/route.js
-
 import { connectToDatabase } from '../../lib/mongodb';
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
@@ -9,26 +7,34 @@ async function authenticate(req) {
   const tokenFromCookie = cookieHeader.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
   const token = req.headers.get('authorization')?.split('Bearer ')[1] || tokenFromCookie;
 
-  if (!token) throw new Error('Not authenticated');
+  if (!token) {
+    console.error('Unauthorized: No token provided');
+    return null; // Return null instead of throwing error to avoid popups
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     return decoded.id;
   } catch (error) {
-    throw new Error('Invalid or expired token');
+    console.error('JWT verification error:', error.message);
+    return null;
   }
 }
 
 export async function GET(req) {
   try {
     const userId = await authenticate(req);
+    if (!userId) {
+      return Response.json({ items: [] });
+    }
+
     const { db } = await connectToDatabase();
     const cartsCollection = db.collection('carts');
     const productsCollection = db.collection('products');
 
     const cart = await cartsCollection.findOne({ userId: new ObjectId(userId) });
     if (!cart) {
-      return Response.json({ items: [], message: 'Cart is empty' });
+      return Response.json({ items: [] });
     }
 
     const itemsWithDetails = await Promise.all(
@@ -41,19 +47,20 @@ export async function GET(req) {
       })
     );
 
-    return Response.json({ items: itemsWithDetails, message: 'Cart retrieved successfully' });
+    return Response.json({ items: itemsWithDetails });
   } catch (error) {
-    console.error('Cart GET error:', error);
-    return new Response(JSON.stringify({ message: error.message || 'Failed to fetch cart' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Cart GET error:', error.message);
+    return Response.json({ items: [] });
   }
 }
 
 export async function POST(req) {
   try {
     const userId = await authenticate(req);
+    if (!userId) {
+      return Response.json({ items: [] });
+    }
+
     const { productId, quantity } = await req.json();
 
     if (!productId || !quantity || quantity < 1) {
@@ -92,41 +99,38 @@ export async function POST(req) {
 
     return Response.json({ message: 'Added to cart successfully' });
   } catch (error) {
-    console.error('Cart POST error:', error);
-    return new Response(JSON.stringify({ message: error.message || 'Failed to add to cart' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Cart POST error:', error.message);
+    return Response.json({ message: 'Failed to add to cart' }, { status: 400 });
   }
 }
 
 export async function DELETE(req) {
   try {
     const userId = await authenticate(req);
-    const { productId } = await req.json();
-
-    if (!productId) {
-      return Response.json({ message: 'Missing productId' }, { status: 400 });
+    if (!userId) {
+      console.error('Cart DELETE: No authenticated user, returning empty response');
+      return Response.json({ items: [] });
     }
 
     const { db } = await connectToDatabase();
     const cartsCollection = db.collection('carts');
 
     const cart = await cartsCollection.findOne({ userId: new ObjectId(userId) });
-    if (!cart) return Response.json({ items: [], message: 'Cart is empty' });
+    if (!cart) {
+      console.log(`Cart DELETE: No cart found for user ${userId}, returning empty response`);
+      return Response.json({ items: [] });
+    }
 
-    const updatedItems = cart.items.filter((item) => item.productId.toString() !== productId);
+    // Clear all items in the cart
     await cartsCollection.updateOne(
       { userId: new ObjectId(userId) },
-      { $set: { items: updatedItems, updatedAt: new Date() } }
+      { $set: { items: [], updatedAt: new Date() } }
     );
 
-    return Response.json({ items: updatedItems, message: 'Item removed successfully' });
+    console.log(`Cart cleared successfully for user ${userId}`);
+    return Response.json({ items: [], message: 'Cart cleared successfully' });
   } catch (error) {
-    console.error('Cart DELETE error:', error);
-    return new Response(JSON.stringify({ message: error.message || 'Failed to remove item' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Cart DELETE error:', error.message);
+    return Response.json({ message: 'Failed to clear cart', items: [] }, { status: 400 });
   }
 }

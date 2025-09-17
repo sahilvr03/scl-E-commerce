@@ -14,10 +14,13 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} flex flex-col min-h-screen`}>
+      <body className={`${inter.className} flex flex-col min-h-screen m-0 p-0`}>
         <Header />
-        <main className="flex-1">{children}</main>
-        <div className='z-[1000]' ><Footer /></div>
+        {/* Make sure no extra gap here */}
+        <main className="flex-1 m-0 p-0">{children}</main>
+        <div className="z-[1000]">
+          <Footer />
+        </div>
         <Toaster />
       </body>
     </html>

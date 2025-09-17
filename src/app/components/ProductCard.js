@@ -13,60 +13,66 @@ export default function ProductCard({ product, isSale = false }) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleAddToCart = async (e) => {
-    e.stopPropagation();
-    setLoading(true);
-    try {
-      const response = await fetch('/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: product._id,
-          quantity: 1,
-        }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Received non-JSON response from cart API');
-        }
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to add to cart');
+const handleAddToCart = async (e) => {
+  e.stopPropagation();
+  setLoading(true);
+  try {
+    const response = await fetch('/api/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productId: product._id,
+        quantity: 1,
+      }),
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Received non-JSON response from cart API');
       }
-
-      toast.success(`${product.title} added to cart!`, {
-        style: {
-          background: '#FFFFFF',
-          color: '#1F2937',
-          border: '1px solid #F85606',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(248, 86, 6, 0.2)',
-        },
-        iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
-      });
-
-      // Dispatch custom event for cart update
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: 1 } }));
-      }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast.error(error.message || 'Failed to add to cart', {
-        style: {
-          background: '#FFFFFF',
-          color: '#1F2937',
-          border: '1px solid #EF4444',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
-        },
-        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
-      });
-    } finally {
-      setLoading(false);
+      const data = await response.json();
+      throw new Error(data.message || 'Failed to add to cart');
     }
-  };
+    // Fetch updated cart data
+    const cartResponse = await fetch('/api/cart', {
+      credentials: 'include',
+    });
+    if (!cartResponse.ok) {
+      throw new Error('Failed to fetch updated cart data');
+    }
+    const cartData = await cartResponse.json();
+    const count = cartData.items ? cartData.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
+    toast.success(`${product.title} added to cart!`, {
+      style: {
+        background: '#FFFFFF',
+        color: '#1F2937',
+        border: '1px solid #F85606',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(248, 86, 6, 0.2)',
+      },
+      iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
+    });
+    // Dispatch custom event with the updated cart count
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count } }));
+    }
+  } catch (error) {
+    console.error('Error adding to cart:', error);
+    toast.error(error.message || 'Failed to add to cart', {
+      style: {
+        background: '#FFFFFF',
+        color: '#1F2937',
+        border: '1px solid #EF4444',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+      },
+      iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleBuyNow = (e) => {
     e.stopPropagation();

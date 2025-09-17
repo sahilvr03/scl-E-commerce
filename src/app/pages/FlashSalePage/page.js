@@ -78,7 +78,7 @@ export default function FlashSalePage() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl">
         {/* Header */}
         <motion.header
-          className="sticky top-0 z-20 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm py-4 mb-8 rounded-b-lg"
+          className="sticky top-0 z-20  text-gray-800 shadow-sm py-4 mb-8 rounded-b-lg"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, type: 'spring', stiffness: 300 }}
@@ -101,8 +101,7 @@ export default function FlashSalePage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Filter className="w-5 h-5" />
-              <span className="text-sm font-medium hidden sm:inline">Filter & Sort</span>
+          
             </motion.button>
           </div>
         </motion.header>

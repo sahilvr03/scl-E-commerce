@@ -20,9 +20,9 @@ import {
   Package,
   LogIn,
   UserPlus,
-  Heart,
   Zap,
   Star,
+  Heart,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -37,11 +37,10 @@ export default function Navbar() {
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false); // New state for profile dropdown
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const router = useRouter();
-  const dropdownRef = useRef(null); // Ref to track the dropdown
+  const dropdownRef = useRef(null);
 
-  // Persist dark mode in local storage
   useEffect(() => {
     const darkMode = localStorage.getItem('darkMode') === 'true';
     setIsDarkMode(darkMode);
@@ -52,7 +51,6 @@ export default function Navbar() {
     }
   }, []);
 
-  // Fetch session and cart data
   useEffect(() => {
     async function fetchSessionAndData() {
       setError(null);
@@ -103,7 +101,6 @@ export default function Navbar() {
         router.push('/pages/login');
       }
 
-      // Fetch categories
       try {
         const response = await fetch('/api/categories');
         const data = await response.json();
@@ -206,7 +203,6 @@ export default function Navbar() {
     setSearchQuery('');
   };
 
-  // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -236,7 +232,6 @@ export default function Navbar() {
         transition={{ duration: 0.4, type: 'spring', stiffness: 200 }}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Main Navbar */}
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-4">
               <motion.button
@@ -302,9 +297,9 @@ export default function Navbar() {
               </Link>
               {isLoggedIn ? (
                 <div className="relative group" onMouseEnter={() => setProfileDropdownOpen(true)} onMouseLeave={() => setProfileDropdownOpen(false)}>
-                  <Link
-                    href="/account"
+                  <button
                     className="flex items-center p-2 rounded-lg hover:bg-orange-100 dark:hover:bg-gray-800 transition-colors duration-300"
+                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                   >
                     <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                       <div className="w-7 h-7 rounded-full bg-orange-600 dark:bg-orange-400 flex items-center justify-center text-white font-medium text-sm shadow-sm">
@@ -314,7 +309,7 @@ export default function Navbar() {
                     <span className="ml-2 text-sm font-medium hidden lg:inline text-gray-700 dark:text-gray-200">
                       {userDetails?.name || 'Account'}
                     </span>
-                  </Link>
+                  </button>
                   <motion.div
                     ref={dropdownRef}
                     className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-xl rounded-lg py-2 z-60 border border-gray-200 dark:border-gray-700"
@@ -322,20 +317,7 @@ export default function Navbar() {
                     animate={{ opacity: profileDropdownOpen ? 1 : 0, y: profileDropdownOpen ? 0 : -10 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <Link
-                      href="/account"
-                      className="block px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200"
-                      onClick={() => setProfileDropdownOpen(false)}
-                    >
-                      Profile
-                    </Link>
-                    <Link
-                      href="/wishlist"
-                      className="block px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200"
-                      onClick={() => setProfileDropdownOpen(false)}
-                    >
-                      Wishlist
-                    </Link>
+                   
                     <button
                       onClick={() => {
                         handleLogout();
@@ -384,7 +366,6 @@ export default function Navbar() {
               </Link>
             </div>
           </div>
-          {/* Mobile Search Bar */}
           <AnimatePresence>
             {searchOpen && (
               <motion.div
@@ -420,7 +401,6 @@ export default function Navbar() {
               </motion.div>
             )}
           </AnimatePresence>
-          {/* Secondary Navigation */}
           <div className="hidden md:flex items-center justify-center gap-6 py-2 border-t border-gray-200 dark:border-gray-700">
             <Link href="/" className="flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200">
               <Home className="h-4 w-4" /> Home
@@ -466,7 +446,6 @@ export default function Navbar() {
           </div>
         </div>
       </motion.header>
-      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
@@ -587,13 +566,6 @@ export default function Navbar() {
                             {userDetails?.name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
                           </div>
                           Account
-                        </Link>
-                        <Link
-                          href="/wishlist"
-                          className="block py-2 px-3 rounded-lg text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200 flex items-center text-sm"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          <Heart className="w-5 h-5 mr-3" /> Wishlist
                         </Link>
                         <button
                           onClick={() => {

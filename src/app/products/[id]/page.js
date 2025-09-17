@@ -19,6 +19,7 @@ export default function ProductDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderDetails, setOrderDetails] = useState({
     name: '',
     city: '',
@@ -27,7 +28,6 @@ export default function ProductDetailPage() {
     phone: '',
     altPhone: '',
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -99,9 +99,71 @@ export default function ProductDetailPage() {
     }
   }, [params.id, product?.category]);
 
-  const handleAddToCart = async () => {
-    if (!product?.inStock) {
-      toast.error('Product is out of stock', {
+  const handleAddToCart = async (e) => {
+    e.stopPropagation();
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: product._id,
+          quantity: quantity, // Use the selected quantity from the UI
+        }),
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Received non-JSON response from cart API');
+        }
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to add to cart');
+      }
+      // Fetch updated cart data
+      const cartResponse = await fetch('/api/cart', {
+        credentials: 'include',
+      });
+      if (!cartResponse.ok) {
+        throw new Error('Failed to fetch updated cart data');
+      }
+      const cartData = await cartResponse.json();
+      const count = cartData.items ? cartData.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
+      toast.success(`${product.title} added to cart!`, {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #F85606',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(248, 86, 6, 0.2)',
+        },
+        iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
+      });
+      // Dispatch custom event with the updated cart count
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count } }));
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error(error.message || 'Failed to add to cart', {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #EF4444',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+        },
+        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOrderSubmit = async (e) => {
+    e.preventDefault();
+    if (!orderDetails.name || !orderDetails.city || !orderDetails.address || !orderDetails.town || !orderDetails.phone) {
+      toast.error('Please fill all required fields', {
         style: {
           background: '#FFFFFF',
           color: '#1F2937',
@@ -116,12 +178,15 @@ export default function ProductDetailPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/cart', {
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId: params.id,
           quantity,
+          paymentMethod,
+          shippingDetails: orderDetails,
+          status: 'Pending',
         }),
         credentials: 'include',
       });
@@ -129,13 +194,23 @@ export default function ProductDetailPage() {
       if (!response.ok) {
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Received non-JSON response from cart API');
+          throw new Error('Received non-JSON response from orders API');
         }
         const data = await response.json();
-        throw new Error(data.message || 'Failed to add to cart');
+        throw new Error(data.message || 'Failed to place order');
       }
 
-      toast.success('Product added to cart!', {
+      // Fetch updated orders count
+      const ordersResponse = await fetch('/api/orders', {
+        credentials: 'include',
+      });
+      if (!ordersResponse.ok) {
+        throw new Error('Failed to fetch updated orders data');
+      }
+      const ordersData = await ordersResponse.json();
+      const ordersCount = Array.isArray(ordersData) ? ordersData.length : 0;
+
+      toast.success('Order placed successfully!', {
         style: {
           background: '#FFFFFF',
           color: '#1F2937',
@@ -146,12 +221,24 @@ export default function ProductDetailPage() {
         iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
       });
 
+      // Dispatch custom event for orders update
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: quantity } }));
+        window.dispatchEvent(new CustomEvent('ordersUpdated', { detail: { count: ordersCount } }));
       }
+
+      setIsModalOpen(false);
+      setPaymentMethod(null);
+      setOrderDetails({
+        name: '',
+        city: '',
+        address: '',
+        town: '',
+        phone: '',
+        altPhone: '',
+      });
     } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast.error(error.message || 'Failed to add to cart', {
+      console.error('Error placing order:', error);
+      toast.error(error.message || 'Failed to place order', {
         style: {
           background: '#FFFFFF',
           color: '#1F2937',
@@ -216,83 +303,6 @@ export default function ProductDetailPage() {
 
   const handleOrderDetailsChange = (e) => {
     setOrderDetails({ ...orderDetails, [e.target.name]: e.target.value });
-  };
-
-  const handleOrderSubmit = async (e) => {
-    e.preventDefault();
-    if (!orderDetails.name || !orderDetails.city || !orderDetails.address || !orderDetails.town || !orderDetails.phone) {
-      toast.error('Please fill all required fields', {
-        style: {
-          background: '#FFFFFF',
-          color: '#1F2937',
-          border: '1px solid #EF4444',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
-        },
-        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: params.id,
-          quantity,
-          paymentMethod,
-          shippingDetails: orderDetails,
-          status: 'Pending',
-        }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Received non-JSON response from orders API');
-        }
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to place order');
-      }
-
-      toast.success('Order placed successfully!', {
-        style: {
-          background: '#FFFFFF',
-          color: '#1F2937',
-          border: '1px solid #F85606',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(248, 86, 6, 0.2)',
-        },
-        iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
-      });
-      setIsModalOpen(false);
-      setPaymentMethod(null);
-      setOrderDetails({
-        name: '',
-        city: '',
-        address: '',
-        town: '',
-        phone: '',
-        altPhone: '',
-      });
-    } catch (error) {
-      console.error('Error placing order:', error);
-      toast.error(error.message || 'Failed to place order', {
-        style: {
-          background: '#FFFFFF',
-          color: '#1F2937',
-          border: '1px solid #EF4444',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
-        },
-        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const variants = {
@@ -611,7 +621,7 @@ export default function ProductDetailPage() {
             >
               <div className="flex items-center space-x-2 sm:space-x-3 text-sm sm:text-base text-gray-600">
                 <ShieldCheck className="w-4 h-4 sm:w-5 h-5 text-orange-500" />
-                <span>30-day money back guarantee</ span>
+                <span>30-day money back guarantee</span>
               </div>
             </motion.div>
           </motion.div>
