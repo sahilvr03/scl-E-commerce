@@ -108,12 +108,18 @@ export async function DELETE(req) {
   try {
     const userId = await authenticate(req);
     if (!userId) {
-      console.error('Cart DELETE: No authenticated user, returning empty response');
+      console.error("Cart DELETE: No authenticated user, returning empty response");
       return Response.json({ items: [] });
     }
 
+    const { productId } = await req.json();
+    if (!productId) {
+      return Response.json({ message: "ProductId is required" }, { status: 400 });
+    }
+
     const { db } = await connectToDatabase();
-    const cartsCollection = db.collection('carts');
+    const cartsCollection = db.collection("carts");
+    const productsCollection = db.collection("products");
 
     const cart = await cartsCollection.findOne({ userId: new ObjectId(userId) });
     if (!cart) {
@@ -121,16 +127,36 @@ export async function DELETE(req) {
       return Response.json({ items: [] });
     }
 
-    // Clear all items in the cart
-    await cartsCollection.updateOne(
-      { userId: new ObjectId(userId) },
-      { $set: { items: [], updatedAt: new Date() } }
+    // ✅ Remove only the matching item
+    const updatedItems = cart.items.filter(
+      (item) => item.productId.toString() !== productId
     );
 
-    console.log(`Cart cleared successfully for user ${userId}`);
-    return Response.json({ items: [], message: 'Cart cleared successfully' });
+    await cartsCollection.updateOne(
+      { userId: new ObjectId(userId) },
+      { $set: { items: updatedItems, updatedAt: new Date() } }
+    );
+
+    // ✅ Return updated cart items with product details
+    const itemsWithDetails = await Promise.all(
+      updatedItems.map(async (item) => {
+        const product = await productsCollection.findOne({ _id: new ObjectId(item.productId) });
+        return {
+          ...item,
+          product: product || {
+            _id: item.productId,
+            title: "Unknown Product",
+            price: 0,
+            imageUrl: "/placeholder.jpg",
+          },
+        };
+      })
+    );
+
+    console.log(`Item ${productId} removed successfully for user ${userId}`);
+    return Response.json({ items: itemsWithDetails, message: "Item removed successfully" });
   } catch (error) {
-    console.error('Cart DELETE error:', error.message);
-    return Response.json({ message: 'Failed to clear cart', items: [] }, { status: 400 });
+    console.error("Cart DELETE error:", error.message);
+    return Response.json({ message: "Failed to remove item", items: [] }, { status: 400 });
   }
 }

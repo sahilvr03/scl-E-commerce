@@ -89,7 +89,7 @@ export default function CartPage() {
             Your Cart
           </h1>
           <button
-            onClick={() => router.push("/products")}
+            onClick={() => router.push("/pages/ForYouPage")}
             className="text-indigo-600 hover:text-indigo-700 font-medium"
           >
             Continue Shopping
@@ -103,7 +103,7 @@ export default function CartPage() {
               Your cart is empty.
             </p>
             <button
-              onClick={() => router.push("/products")}
+              onClick={() => router.push("/pages/ForYouPage")}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium"
             >
               Shop Now
