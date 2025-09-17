@@ -218,7 +218,7 @@ export default function CategoryPage() {
                 />
               </svg>
               <p className="text-lg text-gray-600 mb-4">No products available in this category.</p>
-              <Link href="/products">
+              <Link href="/pages/ForYouPage">
                 <motion.button
                   className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-md"
                   whileHover={{ scale: 1.05, boxShadow: '0 4px 12px rgba(248, 86, 6, 0.3)' }}
