@@ -58,7 +58,7 @@ export default function SignupPage() {
 
       if (response.ok) {
         toast.success(data.message || 'Registration successful! Please log in.');
-        router.push('/login');
+        router.push('/pages/login');
       } else {
         toast.error(data.message || 'Registration failed.');
       }

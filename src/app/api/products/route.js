@@ -1,3 +1,4 @@
+// api/products/route.js
 import { connectToDatabase } from '../../lib/mongodb';
 
 export async function GET(request) {
@@ -5,7 +6,10 @@ export async function GET(request) {
     const { db } = await connectToDatabase();
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
-    const query = type ? { type } : {};
+    const category = searchParams.get('category');
+    const query = {};
+    if (type) query.type = type;
+    if (category) query.category = category;
     const products = await db.collection('products').find(query).toArray();
     return new Response(JSON.stringify(products), {
       status: 200,
@@ -44,6 +48,11 @@ export async function POST(request) {
     }
     if (data.colors && !Array.isArray(data.colors)) {
       return new Response(JSON.stringify({ error: 'Colors must be an array' }), { status: 400 });
+    }
+
+    // Optional: Validate category if present
+    if (data.category && typeof data.category !== 'string') {
+      return new Response(JSON.stringify({ error: 'Category must be a string' }), { status: 400 });
     }
 
     const product = {

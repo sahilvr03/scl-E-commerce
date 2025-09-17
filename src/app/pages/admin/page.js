@@ -504,37 +504,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-poppins">
       <div className="flex">
-        {/* Sidebar
-        <motion.aside
-          className={`fixed inset-y-0 left-0 bg-white dark:bg-gray-800 shadow-lg z-50 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 md:w-64 transition-transform duration-300 ease-in-out border-r border-gray-200 dark:border-gray-700`}
-          initial={{ x: '-100%' }}
-          animate={{ x: sidebarOpen ? 0 : '-100%' }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="p-6 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Admin Panel</h2>
-            <motion.button
-              className="md:hidden text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400"
-              onClick={() => setSidebarOpen(false)}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <X className="w-6 h-6" />
-            </motion.button>
-          </div>
-          <nav className="p-4 space-y-2">
-            <button className="w-full flex items-center px-4 py-2 text-gray-700 dark:text-gray-200 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-lg">
-              <Package className="w-5 h-5 mr-3" /> Products
-            </button>
-            <button className="w-full flex items-center px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 rounded-lg transition-colors">
-              <Package className="w-5 h-5 mr-3" /> Orders
-            </button>
-            <button className="w-full flex items-center px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 rounded-lg transition-colors">
-              <Package className="w-5 h-5 mr-3" /> Categories
-            </button>
-          </nav>
-        </motion.aside> */}
-
+ 
         {/* Main Content */}
         <div className="flex-1 p-4 sm:p-6 lg:p-8">
           <motion.div

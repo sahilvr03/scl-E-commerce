@@ -33,24 +33,38 @@ export async function POST(req) {
       });
     }
 
-    const token = jwt.sign(
-      { id: user._id.toString(), email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
+const token = jwt.sign(
+  { id: user._id.toString(), email: user.email, role: user.role },
+  process.env.JWT_SECRET,
+  { expiresIn: '1d' }
+);
 
-    const response = new Response(
-      JSON.stringify({ message: 'Login successful!', user: { id: user._id.toString(), email: user.email, role: user.role } }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-    response.headers.set(
-      'Set-Cookie',
-      `token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`
-    );
-    return response;
+const response = new Response(
+  JSON.stringify({
+    message: 'Login successful!',
+    token, // ✅ Send token in response
+    user: {
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    },
+  }),
+  {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  }
+);
+
+// Set HttpOnly cookie
+response.headers.set(
+  'Set-Cookie',
+  `token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict${
+    process.env.NODE_ENV === 'production' ? '; Secure' : ''
+  }`
+);
+
+return response;
+
   } catch (error) {
     console.error('Login error:', error);
     return new Response(JSON.stringify({ message: 'An unexpected error occurred.' }), {

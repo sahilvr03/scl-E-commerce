@@ -1,4 +1,3 @@
-// app/pages/login/LoginForm.js
 'use client';
 
 import { useState } from 'react';
@@ -36,6 +35,22 @@ export default function LoginForm() {
       const data = await response.json();
       toast.success(data.message || 'Login successful!');
 
+      // ✅ Save token in localStorage for authentication
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+      }
+
+      // Optional: Save basic user info
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          id: data.user.id,
+          email: data.user.email,
+          role: data.user.role,
+        })
+      );
+
+      // Fetch session to verify user
       const sessionResponse = await fetch('/api/auth/session', {
         credentials: 'include',
       });

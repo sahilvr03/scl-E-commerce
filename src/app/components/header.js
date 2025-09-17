@@ -140,43 +140,39 @@ export default function Navbar() {
     document.documentElement.classList.toggle('dark');
   };
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
+const handleLogout = async () => {
+  try {
+    const response = await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include', // include cookies
+    });
+
+    if (response.ok) {
+      // ✅ Clear localStorage for token & user
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+
+      toast.success('Logged out successfully!', {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #F85606',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(248, 86, 6, 0.2)',
+        },
+        iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
       });
-      if (response.ok) {
-        toast.success('Logged out successfully!', {
-          style: {
-            background: '#FFFFFF',
-            color: '#1F2937',
-            border: '1px solid #F85606',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(248, 86, 6, 0.2)',
-          },
-          iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
-        });
-        setIsLoggedIn(false);
-        setUserDetails(null);
-        setCartCount(0);
-        router.push('/pages/login');
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.message || 'Logout failed.', {
-          style: {
-            background: '#FFFFFF',
-            color: '#1F2937',
-            border: '1px solid #EF4444',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
-          },
-          iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
-        });
-      }
-    } catch (error) {
-      console.error('Error during logout:', error);
-      toast.error('An error occurred during logout.', {
+
+      // ✅ Reset client state
+      setIsLoggedIn(false);
+      setUserDetails(null);
+      setCartCount(0);
+
+      // ✅ Redirect to login
+      router.push('/pages/login');
+    } else {
+      const errorData = await response.json();
+      toast.error(errorData.message || 'Logout failed.', {
         style: {
           background: '#FFFFFF',
           color: '#1F2937',
@@ -187,7 +183,21 @@ export default function Navbar() {
         iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
       });
     }
-  };
+  } catch (error) {
+    console.error('Error during logout:', error);
+    toast.error('An error occurred during logout.', {
+      style: {
+        background: '#FFFFFF',
+        color: '#1F2937',
+        border: '1px solid #EF4444',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+      },
+      iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+    });
+  }
+};
+
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -312,12 +322,11 @@ export default function Navbar() {
                   </button>
                   <motion.div
                     ref={dropdownRef}
-                    className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-xl rounded-lg py-2 z-60 border border-gray-200 dark:border-gray-700"
+                    className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-xl rounded-lg py-2 z-50 border border-gray-200 dark:border-gray-700"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: profileDropdownOpen ? 1 : 0, y: profileDropdownOpen ? 0 : -10 }}
                     transition={{ duration: 0.2 }}
                   >
-                   
                     <button
                       onClick={() => {
                         handleLogout();
@@ -415,18 +424,15 @@ export default function Navbar() {
               <Heart className="h-4 w-4" /> For You
             </Link>
             <div className="relative group">
-              <button className="flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200">
+              <button className="flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200 py-2 px-3">
                 <Grid className="h-4 w-4" /> Categories
                 <ChevronDown className="h-4 w-4" />
               </button>
               <motion.div
-                className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-xl rounded-lg py-2 z-60 border border-gray-200 dark:border-gray-700 hidden group-hover:block"
+                className="absolute left-0 top-full mt-0 w-48 bg-white dark:bg-gray-800 shadow-xl rounded-lg py-2 z-50 border border-gray-200 dark:border-gray-700 hidden group-hover:block"
                 initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: categoryMenuOpen ? 1 : 0, y: categoryMenuOpen ? 0 : -10 }}
-                exit={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                onMouseEnter={() => setCategoryMenuOpen(true)}
-                onMouseLeave={() => setCategoryMenuOpen(false)}
               >
                 {categories.length > 0 ? (
                   categories.map((category) => (
@@ -520,7 +526,7 @@ export default function Navbar() {
                               categories.map((category) => (
                                 <Link
                                   key={category._id}
-                                  href={`/pages/categoryPage/${category._id}`}
+                                  href={`/pages/CategoryPage/${category._id}`}
                                   className="block py-2 px-3 rounded-lg text-sm text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200"
                                   onClick={() => setMobileMenuOpen(false)}
                                 >
@@ -534,20 +540,8 @@ export default function Navbar() {
                         )}
                       </AnimatePresence>
                     </div>
-                    <Link
-                      href="/deals"
-                      className="block py-2 px-3 rounded-lg text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200 flex items-center text-sm"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <Tag className="w-5 h-5 mr-3" /> Deals
-                    </Link>
-                    <Link
-                      href="/new-arrivals"
-                      className="block py-2 px-3 rounded-lg text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200 flex items-center text-sm"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <Sparkles className="w-5 h-5 mr-3" /> New Arrivals
-                    </Link>
+                    
+                   
                   </nav>
                 </div>
                 <div>
@@ -557,16 +551,7 @@ export default function Navbar() {
                   <nav className="space-y-2">
                     {isLoggedIn ? (
                       <>
-                        <Link
-                          href="/account"
-                          className="block py-2 px-3 rounded-lg text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200 flex items-center text-sm"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          <div className="w-5 h-5 rounded-full bg-orange-600 dark:bg-orange-400 flex items-center justify-center text-white text-xs font-medium mr-3">
-                            {userDetails?.name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
-                          </div>
-                          Account
-                        </Link>
+                       
                         <button
                           onClick={() => {
                             handleLogout();
@@ -596,7 +581,7 @@ export default function Navbar() {
                       </>
                     )}
                     <Link
-                      href="/orders"
+                      href="/pages/orders"
                       className="block py-2 px-3 rounded-lg text-gray-800 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200 flex items-center text-sm"
                       onClick={() => setMobileMenuOpen(false)}
                     >

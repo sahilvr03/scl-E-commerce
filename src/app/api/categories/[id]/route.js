@@ -1,67 +1,89 @@
+// api/categories/[id]/route.js
 import { connectToDatabase } from '../../../lib/mongodb';
-import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
 
-async function authenticate(req) {
-  const token = req.headers.get('authorization')?.split('Bearer ')[1];
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
+export async function GET(req, { params }) {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return decoded.id;
+    const { db } = await connectToDatabase();
+    const category = await db.collection('categories').findOne({ _id: new ObjectId(params.id) });
+    if (!category) {
+      return new Response(JSON.stringify({ error: 'Category not found' }), { status: 404 });
+    }
+    return new Response(JSON.stringify(category), { status: 200 });
   } catch (error) {
-    throw new Error('Invalid or expired token');
+    console.error('Category GET error:', error);
+    return new Response(JSON.stringify({ error: 'Failed to fetch category' }), { status: 500 });
   }
 }
 
-export async function GET(req) {
+export async function PUT(request, { params }) {
   try {
     const { db } = await connectToDatabase();
-    const categoriesCollection = db.collection('categories');
+    const data = await request.json();
+    const { _id, ...categoryData } = data;
 
-    const url = new URL(req.url);
-    const categoryId = url.pathname.split('/').pop();
-
-    if (categoryId && categoryId !== 'categories') {
-      const category = await categoriesCollection.findOne({ _id: new ObjectId(categoryId) });
-      if (!category) {
-        return new Response(JSON.stringify({ error: 'Category not found' }), { status: 404 });
-      }
-      return new Response(JSON.stringify(category), { status: 200 });
+    // Validate required fields
+    if (categoryData.name && typeof categoryData.name !== 'string') {
+      return new Response(JSON.stringify({ error: 'Category name must be a string' }), { status: 400 });
     }
 
-    const categories = await categoriesCollection.find({}).toArray();
-    return new Response(JSON.stringify(categories), { status: 200 });
+    // Validate icon field
+    if (categoryData.icon && typeof categoryData.icon !== 'string') {
+      return new Response(JSON.stringify({ error: 'Icon must be a string' }), { status: 400 });
+    }
+
+    // Validate parentId if provided
+    if (categoryData.parentId && !ObjectId.isValid(categoryData.parentId)) {
+      return new Response(JSON.stringify({ error: 'Invalid parentId format' }), { status: 400 });
+    }
+
+    // Validate description if provided
+    if (categoryData.description && typeof categoryData.description !== 'string') {
+      return new Response(JSON.stringify({ error: 'Description must be a string' }), { status: 400 });
+    }
+
+    const result = await db.collection('categories').updateOne(
+      { _id: new ObjectId(params.id) },
+      { $set: { ...categoryData, updatedAt: new Date() } }
+    );
+
+    if (result.matchedCount === 0) {
+      return new Response(JSON.stringify({ error: 'Category not found' }), { status: 404 });
+    }
+
+    const updatedCategory = await db.collection('categories').findOne({ _id: new ObjectId(params.id) });
+    return new Response(JSON.stringify(updatedCategory), { status: 200 });
   } catch (error) {
-    console.error('Categories GET error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch categories' }), { status: 500 });
+    console.error('Error updating category:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
   }
 }
 
-export async function POST(req) {
+export async function DELETE(request, { params }) {
   try {
-    const userId = await authenticate(req);
     const { db } = await connectToDatabase();
-    const usersCollection = db.collection('users');
-    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
-
-    if (user.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 403 });
+    
+    // First, check if category has subcategories
+    const subcategories = await db.collection('categories').find({ parentId: new ObjectId(params.id) }).toArray();
+    if (subcategories.length > 0) {
+      return new Response(JSON.stringify({ error: 'Cannot delete category with subcategories. Delete subcategories first.' }), { status: 400 });
     }
 
-    const categoryData = await req.json();
-    const categoriesCollection = db.collection('categories');
+    // Check if products are assigned to this category
+    const productsInCategory = await db.collection('products').find({ category: params.id }).toArray();
+    if (productsInCategory.length > 0) {
+      return new Response(JSON.stringify({ error: 'Cannot delete category with assigned products. Reassign products first.' }), { status: 400 });
+    }
 
-    const result = await categoriesCollection.insertOne({
-      ...categoryData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    const result = await db.collection('categories').deleteOne({ _id: new ObjectId(params.id) });
 
-    return new Response(JSON.stringify({ message: 'Category added successfully!', categoryId: result.insertedId }), { status: 201 });
+    if (result.deletedCount === 0) {
+      return new Response(JSON.stringify({ error: 'Category not found' }), { status: 404 });
+    }
+
+    return new Response(JSON.stringify({ message: 'Category deleted successfully' }), { status: 200 });
   } catch (error) {
-    console.error('Categories POST error:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to add category' }), { status: 400 });
+    console.error('Error deleting category:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
   }
 }

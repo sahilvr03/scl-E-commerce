@@ -1,3 +1,4 @@
+// api/products/[id]/route.js
 import { connectToDatabase } from '../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 
@@ -40,6 +41,11 @@ export async function PUT(request, { params }) {
     }
     if (productData.colors && !Array.isArray(productData.colors)) {
       return new Response(JSON.stringify({ error: 'Colors must be an array' }), { status: 400 });
+    }
+
+    // Optional: Validate category if present (assuming categories are strings)
+    if (productData.category && typeof productData.category !== 'string') {
+      return new Response(JSON.stringify({ error: 'Category must be a string' }), { status: 400 });
     }
 
     const result = await db.collection('products').updateOne(

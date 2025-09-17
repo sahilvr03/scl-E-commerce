@@ -11,31 +11,69 @@ export default function UserOrdersPage() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   useEffect(() => {
-    const fetchOrders = async () => {
+    const checkAuthAndFetchOrders = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch("/api/orders", {
+        // 1️⃣ Get token from localStorage
+        const token = localStorage.getItem("authToken");
+
+        if (!token) {
+          // No token -> user is not logged in
+          setShowLoginPopup(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // 2️⃣ Verify session via API
+        const sessionResponse = await fetch("/api/auth/session", {
           credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
-        const data = await response.json();
-
-        // Agar data empty hai => token issue hai => popup dikhao
-        if (Array.isArray(data) && data.length === 0) {
+        if (!sessionResponse.ok) {
+          // Session invalid -> show popup
           setShowLoginPopup(true);
+          setIsLoading(false);
+          return;
+        }
+
+        const sessionData = await sessionResponse.json();
+
+        if (!sessionData.session || !sessionData.session.user) {
+          setShowLoginPopup(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // 3️⃣ Fetch user orders
+        const ordersResponse = await fetch("/api/orders", {
+          credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const ordersData = await ordersResponse.json();
+
+        if (Array.isArray(ordersData) && ordersData.length > 0) {
+          setOrders(ordersData);
         } else {
-          setOrders(data);
+          setOrders([]);
         }
       } catch (error) {
         console.error("Error fetching orders:", error.message);
+        setShowLoginPopup(true);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchOrders();
+    checkAuthAndFetchOrders();
   }, []);
 
+  // Loader state
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -127,7 +165,7 @@ export default function UserOrdersPage() {
 
             <div className="mt-4 flex space-x-3">
               <button
-                onClick={() => (window.location.href = "/login")}
+                onClick={() => (window.location.href = "/pages/login")}
                 className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition"
               >
                 Sign In

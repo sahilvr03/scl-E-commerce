@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Tilt from 'react-parallax-tilt';
 import ProductCard from './../../components/ProductCard';
+import {useRouter } from 'next/navigation'; // ✅ Add useRouter
+
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -28,6 +30,8 @@ export default function ProductDetailPage() {
     phone: '',
     altPhone: '',
   });
+  const router = useRouter(); // ✅ Initialize router
+
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -99,53 +103,19 @@ export default function ProductDetailPage() {
     }
   }, [params.id, product?.category]);
 
-  const handleAddToCart = async (e) => {
-    e.stopPropagation();
-    setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: product._id,
-          quantity: quantity, // Use the selected quantity from the UI
-        }),
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Received non-JSON response from cart API');
-        }
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to add to cart');
-      }
-      // Fetch updated cart data
-      const cartResponse = await fetch('/api/cart', {
-        credentials: 'include',
-      });
-      if (!cartResponse.ok) {
-        throw new Error('Failed to fetch updated cart data');
-      }
-      const cartData = await cartResponse.json();
-      const count = cartData.items ? cartData.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
-      toast.success(`${product.title} added to cart!`, {
-        style: {
-          background: '#FFFFFF',
-          color: '#1F2937',
-          border: '1px solid #F85606',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(248, 86, 6, 0.2)',
-        },
-        iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
-      });
-      // Dispatch custom event with the updated cart count
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count } }));
-      }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast.error(error.message || 'Failed to add to cart', {
+const handleAddToCart = async (e) => {
+  e.stopPropagation();
+  setIsSubmitting(true);
+
+  try {
+    // 1️⃣ Check if the user is logged in
+    const sessionResponse = await fetch('/api/auth/session', {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!sessionResponse.ok) {
+      toast.error('Please login to add items to the cart!', {
         style: {
           background: '#FFFFFF',
           color: '#1F2937',
@@ -155,10 +125,90 @@ export default function ProductDetailPage() {
         },
         iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
       });
-    } finally {
-      setIsSubmitting(false);
+      // Redirect to login page
+      router.push('/pages/login');
+      return;
     }
-  };
+
+    const sessionData = await sessionResponse.json();
+    if (!sessionData.session) {
+      toast.error('Please login to continue!', {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #EF4444',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+        },
+        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+      });
+      router.push('/login');
+      return;
+    }
+
+    // 2️⃣ Add to cart if session exists
+    const response = await fetch('/api/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productId: product._id,
+        quantity: quantity, // selected quantity
+      }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Received non-JSON response from cart API');
+      }
+      const data = await response.json();
+      throw new Error(data.message || 'Failed to add to cart');
+    }
+
+    // 3️⃣ Fetch updated cart data
+    const cartResponse = await fetch('/api/cart', { credentials: 'include' });
+    if (!cartResponse.ok) {
+      throw new Error('Failed to fetch updated cart data');
+    }
+    const cartData = await cartResponse.json();
+
+    const count = cartData.items
+      ? cartData.items.reduce((sum, item) => sum + item.quantity, 0)
+      : 0;
+
+    toast.success(`${product.title} added to cart!`, {
+      style: {
+        background: '#FFFFFF',
+        color: '#1F2937',
+        border: '1px solid #F85606',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(248, 86, 6, 0.2)',
+      },
+      iconTheme: { primary: '#F85606', secondary: '#FFFFFF' },
+    });
+
+    // Dispatch custom event to update cart count globally
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count } }));
+    }
+  } catch (error) {
+    console.error('Error adding to cart:', error);
+    toast.error(error.message || 'Failed to add to cart', {
+      style: {
+        background: '#FFFFFF',
+        color: '#1F2937',
+        border: '1px solid #EF4444',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+      },
+      iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   const handleOrderSubmit = async (e) => {
     e.preventDefault();
@@ -267,7 +317,9 @@ export default function ProductDetailPage() {
     });
   };
 
-  const handleBuyNow = () => {
+ const handleBuyNow = async () => {
+  try {
+    // 🔹 Check if product is in stock
     if (!product?.inStock) {
       toast.error('Product is out of stock', {
         style: {
@@ -281,8 +333,63 @@ export default function ProductDetailPage() {
       });
       return;
     }
+
+    // 🔹 Verify if user is authenticated
+    const sessionResponse = await fetch('/api/auth/session', {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!sessionResponse.ok) {
+      toast.error('Please login to continue!', {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #EF4444',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+        },
+        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+      });
+      router.push('/pages/login'); // ✅ Redirect to login page
+      return;
+    }
+
+    const sessionData = await sessionResponse.json();
+
+    if (!sessionData?.session?.user) {
+      toast.error('Please login to continue!', {
+        style: {
+          background: '#FFFFFF',
+          color: '#1F2937',
+          border: '1px solid #EF4444',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+        },
+        iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+      });
+      router.push('/pages/login');
+      return;
+    }
+
+    // ✅ If authenticated, open checkout modal
     setIsModalOpen(true);
-  };
+
+  } catch (error) {
+    console.error('Error checking authentication:', error);
+    toast.error('Something went wrong. Please try again.', {
+      style: {
+        background: '#FFFFFF',
+        color: '#1F2937',
+        border: '1px solid #EF4444',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+      },
+      iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+    });
+  }
+};
+
 
   const handlePaymentMethod = (method) => {
     setPaymentMethod(method);
