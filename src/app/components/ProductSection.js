@@ -16,7 +16,7 @@ export default function ProductSection({ title, items, loading, error, link, ico
   };
 
   return (
-    <section className={`mb-12 bg-gradient-to-r ${bgColor} p-6 rounded-xl`}>
+    <section className={`mb-12 m bg-gradient-to-r ${bgColor} p-6 rounded-xl`}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div className="flex items-center mb-4 sm:mb-0">
           <div className="p-2 rounded-lg mr-4 bg-opacity-20">{icon}</div>

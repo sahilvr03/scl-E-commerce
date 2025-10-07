@@ -235,7 +235,7 @@ export default function CheckoutPage() {
             </div>
             <div className="flex justify-between font-bold border-t border-gray-200 dark:border-gray-700 pt-4 mt-6 text-lg">
               <span>Total:</span>
-              <span className="text-orange-600 dark:text-orange-400">${total.toFixed(2)}</span>
+              <span className="text-orange-600 dark:text-orange-400">Rs{total.toFixed(2)}</span>
             </div>
           </motion.div>
 

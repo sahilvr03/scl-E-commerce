@@ -238,6 +238,7 @@ export default function HomePage() {
           error={error}
           link="/pages/FlashSalePage"
           icon={<Zap className="h-6 w-6 text-orange-600" fill="currentColor" />}
+          clas
           
           isSale={true}
           endDate={flashSaleItems[0]?.endDate}
