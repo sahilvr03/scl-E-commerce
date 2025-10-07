@@ -137,7 +137,7 @@ export default function CartPage() {
                     {item.product?.title || "Unknown Product"}
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300">
-                    ${item.product.price.toFixed(2)} × {item.quantity} = $
+                    Rs:{item.product.price.toFixed(2)} × {item.quantity} = Rs
                     {(item.product.price * item.quantity).toFixed(2)}
                   </p>
                 </div>
@@ -152,7 +152,7 @@ export default function CartPage() {
 
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md text-right">
               <p className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Total: ${total}
+                Total: Rs:{total}
               </p>
               <button
                 onClick={() => router.push("/pages/CheckoutPage")}

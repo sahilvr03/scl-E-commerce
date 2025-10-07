@@ -617,11 +617,11 @@ const handleAddToCart = async (e) => {
             >
               <div className="flex items-center space-x-2 sm:space-x-4">
                 <p className="text-2xl sm:text-3xl font-bold text-orange-600">
-                  ${parseFloat(product.price || 0).toFixed(2)}
+                  Rs:{parseFloat(product.price || 0).toFixed(2)}
                 </p>
                 {product.originalPrice && (
                   <p className="text-sm sm:text-lg text-gray-500 line-through">
-                    ${parseFloat(product.originalPrice).toFixed(2)}
+                    Rs:{parseFloat(product.originalPrice).toFixed(2)}
                   </p>
                 )}
                 {product.discount && (
