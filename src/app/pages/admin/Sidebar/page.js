@@ -33,8 +33,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           <nav className="space-y-4">
             <NavItem icon={<FiBox />} label="Orders" href="/pages/admin/orders" />
             <NavItem icon={<FiUpload />} label="Upload Product" href="/pages/admin" />
-            <NavItem icon={<FiTag />} label="Flash Sale" href="/pages/admin/flashSales" />
-            <NavItem icon={<FiList />} label="Categories" href="/pages/admin/Category" />
+            {/* <NavItem icon={<FiTag />} label="Flash Sale" href="/pages/admin/flashSales" />
+            <NavItem icon={<FiList />} label="Categories" href="/pages/admin/Category" /> */}
           </nav>
         </div>
       </aside>
